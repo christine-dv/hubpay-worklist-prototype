@@ -136,12 +136,11 @@
 /* ---------------------------------------------------------------------
    State
 --------------------------------------------------------------------- */
-const VENDOR_TYPES = ["Provider/Physician", "Hospital", "General HIH", "HIH Carveout", "Exception"];
+const VENDOR_TYPES = ["Provider/Hospital", "General HIH", "HIH Carveout"];
 const FEE_TYPES = ["Per Chart", "Per Page"];
-const CNA_VENDOR_TYPES = ["Provider/Physician", "Hospital", "General HIH", "HIH Carveout"];
 
 function paymentTypeOptions(vendorType) {
-  if (vendorType === "HIH Carveout" || vendorType === "Exception") {
+  if (vendorType === "HIH Carveout") {
     return ["Pre+Post Pay", "Post Pay Only", "Exclusion"];
   }
   return ["Pre+Post Pay", "Post Pay Only"];
@@ -151,7 +150,7 @@ let rowSeq = 1;
 function newRow() {
   return {
     id: rowSeq++,
-    vendorType: "Provider/Physician",
+    vendorType: "Provider/Hospital",
     vendorName: "",
     paymentType: "Pre+Post Pay",
     feeType: "Per Chart",
@@ -162,12 +161,13 @@ function newRow() {
 }
 
 function hasCnaField(vendorType) {
-  return CNA_VENDOR_TYPES.includes(vendorType);
+  return true;
 }
 
 const state = {
   screen: "form",       // form | review | help | confirmation
   noPPT: false,
+  approvalRequiredPerPage: false,
   rows: [newRow()],
   errors: {}            // rowId -> { field: message }
 };
@@ -185,15 +185,13 @@ function fmtAmount(n) {
 }
 
 function hasVendorNameField(vendorType) {
-  return vendorType === "HIH Carveout" || vendorType === "Exception";
+  return vendorType === "HIH Carveout";
 }
 
 function vendorLabel(row) {
   switch (row.vendorType) {
-    case "Provider/Physician": return "Prov";
-    case "Hospital": return "Hosp";
+    case "Provider/Hospital": return "Prov";
     case "General HIH": return "HIH";
-    case "Exception": return row.vendorName.trim() || "Exception";
     case "HIH Carveout": return row.vendorName.trim() || "Unnamed Vendor";
     default: return row.vendorType;
   }
@@ -208,7 +206,7 @@ function paymentLabel(pt) {
 function isCarveoutName(row) { return hasVendorNameField(row.vendorType); }
 
 function vendorCategory(vendorType) {
-  return (vendorType === "Provider/Physician" || vendorType === "Hospital") ? "provider" : "hih";
+  return (vendorType === "Provider/Hospital") ? "provider" : "hih";
 }
 
 function buildFeeText() {
@@ -217,13 +215,17 @@ function buildFeeText() {
   const included = state.rows.filter(r => r.paymentType !== "Exclusion" && (r.amount !== "" || r.feeType));
   const excluded = state.rows.filter(r => r.paymentType === "Exclusion");
 
+  function isBlankOrZero(v) {
+    return v === "" || v === null || v === undefined || isNaN(parseFloat(v)) || parseFloat(v) === 0;
+  }
+
   // Step A: group rows by vendor identity (vendorType+vendorName+paymentType), collect fees
   // Each row can contribute a primary fee (Per Chart/Per Page) and/or a CNA fee.
   const vendorMap = new Map();
   included.forEach(r => {
     const cnaAmt = hasCnaField(r.vendorType) ? r.cnaFee : "";
-    const hasPrimary = r.amount !== "" && r.amount !== null;
-    const hasCna = cnaAmt !== "" && cnaAmt !== null;
+    const hasPrimary = !isBlankOrZero(r.amount);
+    const hasCna = !isBlankOrZero(cnaAmt);
     if (!hasPrimary && !hasCna) return; // nothing entered yet, skip from preview
 
     const key = r.vendorType + "|" + (isCarveoutName(r) ? r.vendorName.trim() : "") + "|" + r.paymentType;
@@ -233,8 +235,9 @@ function buildFeeText() {
     const entry = vendorMap.get(key);
     if (hasPrimary) {
       let feeStr = fmtAmount(r.amount);
-      if (r.feeType === "Per Page" && r.maxAmount !== "" && r.maxAmount !== null) {
-        feeStr += ` (max ${fmtAmount(r.maxAmount)})`;
+      if (r.feeType === "Per Page") {
+        feeStr += "pp";
+        if (!isBlankOrZero(r.maxAmount)) feeStr += ` (max ${fmtAmount(r.maxAmount)})`;
       }
       entry.fees[r.feeType] = feeStr;
     }
@@ -303,8 +306,9 @@ function buildFeeText() {
     if (!seenExcl.has(lbl)) { seenExcl.add(lbl); excludedLabels.push(lbl); }
   });
   const exclusionSegment = excludedLabels.length ? `Not approved for ${excludedLabels.join(", ")}.` : "";
+  const perPageSegment = state.approvalRequiredPerPage ? "Approval required for all per page fees" : "";
 
-  const all = [...nonExclusionSegments, exclusionSegment].filter(Boolean);
+  const all = [...nonExclusionSegments, exclusionSegment, perPageSegment].filter(Boolean);
   return all.join(" | ");
 }
 
@@ -359,7 +363,11 @@ function renderForm() {
     <div class="card">
       <div class="no-ppt-row">
         <input type="checkbox" id="noPPT" ${state.noPPT ? "checked" : ""}>
-        <label for="noPPT">No PPT fee approvals for this Order</label>
+        <label for="noPPT">Approval required for all PPT fees</label>
+      </div>
+      <div class="no-ppt-row">
+        <input type="checkbox" id="approvalRequiredPerPage" ${state.approvalRequiredPerPage ? "checked" : ""} ${state.noPPT ? "disabled" : ""}>
+        <label for="approvalRequiredPerPage">Approval required for all per page fees</label>
       </div>
 
       ${state.noPPT ? "" : `
@@ -370,9 +378,9 @@ function renderForm() {
               <th style="width:14%">Vendor Type</th>
               <th style="width:13%">Payment Type</th>
               <th style="width:14%">Vendor Name</th>
-              <th style="width:11%">Fee Type</th>
-              <th style="width:11%">$ Amount</th>
               <th style="width:11%">CNA Fee</th>
+              <th style="width:11%">PPT Fee Type</th>
+              <th style="width:11%">PPT Fee Amount</th>
               <th style="width:11%">Max $ Amount</th>
             </tr>
           </thead>
@@ -425,17 +433,17 @@ function rowHtml(r, i) {
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
+        ${showCna
+          ? `<input type="number" step="0.01" min="0" data-field="cnaFee" data-row-id="${r.id}" value="${escapeAttr(r.cnaFee)}" placeholder="0.00">`
+          : `<span class="cell-empty">—</span>`}
+      </td>
+      <td>
         <select data-field="feeType" data-row-id="${r.id}">${optionsHtml(FEE_TYPES, r.feeType)}</select>
       </td>
       <td class="${err.amount ? "err" : ""}">
         ${showAmount
           ? `<input type="number" step="0.01" min="0" data-field="amount" data-row-id="${r.id}" value="${escapeAttr(r.amount)}" placeholder="0.00">
              ${err.amount ? `<span class="field-error">${err.amount}</span>` : ""}`
-          : `<span class="cell-empty">—</span>`}
-      </td>
-      <td>
-        ${showCna
-          ? `<input type="number" step="0.01" min="0" data-field="cnaFee" data-row-id="${r.id}" value="${escapeAttr(r.cnaFee)}" placeholder="0.00">`
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
@@ -452,9 +460,10 @@ function assumptionsHtml() {
     <details class="assumptions">
       <summary>Prototype notes &amp; assumptions</summary>
       <ul>
-        <li>Fee Text Preview formula was reverse-engineered from three sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: the schedule's shared Payment Type always leads the string; Provider/Hospital groups are ordered before HIH-related groups; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; CNA fees are labeled, Per Chart/Per Page fees are bare "$" amounts; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
-        <li>CNA Fee is its own column (rather than a Fee Type option) for Provider/Physician, Hospital, General HIH, and HIH Carveout rows when Payment Type isn't Exclusion — a single row now captures both the primary fee and the CNA fee, no duplicate row needed.</li>
-        <li>Provider/Physician vs. Hospital mutual-exclusion rule was removed from this prototype per feedback — both may be selected freely.</li>
+        <li>Fee Text Preview formula was reverse-engineered from sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: the schedule's shared Payment Type always leads the string; Provider/Hospital groups are ordered before HIH-related groups; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; Per Page fees get a trailing "pp" (e.g. "$1pp"); CNA fees are labeled "CNA $X"; blank or $0 amounts are omitted entirely; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
+        <li>CNA Fee is its own column (rather than a Fee Type option) on every row when Payment Type isn't Exclusion — a single row now captures both the primary fee and the CNA fee, no duplicate row needed.</li>
+        <li>Vendor Type is Provider/Hospital, General HIH, or HIH Carveout (Exception removed per feedback; Provider/Physician and Hospital merged into one option).</li>
+        <li>A row is flagged as a duplicate (blocked with an alert on Review) if another row shares the same Vendor Type/Name, Payment Type, and PPT Fee Type.</li>
         <li>Vendor Name is free text (HIH vendor table doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
         <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
       </ul>
@@ -465,6 +474,12 @@ function assumptionsHtml() {
 function attachFormListeners() {
   document.getElementById("noPPT").addEventListener("change", e => {
     state.noPPT = e.target.checked;
+    render();
+  });
+
+  const perPageCb = document.getElementById("approvalRequiredPerPage");
+  if (perPageCb) perPageCb.addEventListener("change", e => {
+    state.approvalRequiredPerPage = e.target.checked;
     render();
   });
 
@@ -512,6 +527,10 @@ function attachFormListeners() {
   });
 
   document.getElementById("reviewBtn").addEventListener("click", () => {
+    if (!state.noPPT && hasDuplicateRows()) {
+      alert("Duplicate row detected: two or more rows have the same Vendor Type/Name, Payment Type, and PPT Fee Type. Please remove or adjust the duplicate before continuing.");
+      return;
+    }
     if (state.noPPT || validateRows()) {
       state.screen = "review";
       render();
@@ -519,6 +538,17 @@ function attachFormListeners() {
       render();
     }
   });
+}
+
+function hasDuplicateRows() {
+  const seen = new Set();
+  for (const r of state.rows) {
+    const vendorKey = r.vendorType + (hasVendorNameField(r.vendorType) ? "|" + r.vendorName.trim().toLowerCase() : "");
+    const key = vendorKey + "||" + r.paymentType + "||" + r.feeType;
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
 }
 
 function renderReview() {
