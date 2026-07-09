@@ -2,8 +2,8 @@
 
 **Status:** Draft for engineering handoff
 **Prepared for:** Pipelines team (Switchboard)
-**Source of truth for exact UI behavior:** `index.html` in this folder (interactive prototype — see Section 10)
-**Author context:** Reverse-engineered from a fully built HTML/JS prototype plus the original user story/AC. Where the two disagree, this document flags it explicitly and defers to the prototype.
+**Source of truth for UI behavior:** `https://christine-dv.github.io/hubpay-worklist-prototype/ppt-fee-schedule-prototype/` (interactive prototype — see Section 10)
+**Author context:** Reverse-engineered from a fully built HTML/JS prototype, aligned with the current (2026-07-09) user story/AC.
 
 ---
 
@@ -52,8 +52,8 @@ The original acceptance criteria include several requirements that describe back
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `noPPT` | boolean | `false` | "No PPT fee approvals for this Order" — original AC name; prototype checkbox label is "Approval required for all PPT fees" (same semantic: no fee schedule rows apply). |
-| `approvalRequiredPerPage` | boolean | `false` | "Approval required for all per page fees" — not in the original AC; added via iterative feedback. |
+| `noPPT` | boolean | `false` | Backs the "Approval required for all PPT fees" checkbox — no fee schedule rows apply when checked. |
+| `approvalRequiredPerPage` | boolean | `false` | Backs the "Approval required for all per page fees" checkbox. |
 | `rows` | array of Row | one empty Row | See 3.2. |
 
 ### 3.2 Row fields
@@ -68,7 +68,7 @@ The original acceptance criteria include several requirements that describe back
 | `cnaFee` | decimal string (numeric input) | `""` | Never required | Non-negative number; optional on every row (see 3.3) |
 | `maxAmount` | decimal string (numeric input) | `""` | Never required | Non-negative number; only meaningful/visible when `feeType === "Per Page"` |
 
-**Note on `vendorType` option changes from the original AC:** The original AC specified Vendor Type options `Provider/Physician`, `Hospital`, `General HIH`, `HIH Carveout`, `Exception`, with mutual exclusion between `Provider/Physician` and `Hospital`. The prototype has evolved this to exactly three options: `Provider/Hospital` (merged), `General HIH`, `HIH Carveout` — `Exception` was removed. **Build against the three-option list; the mutual-exclusion rule no longer applies (there's only one merged option).**
+**Vendor Type has exactly three options:** `Provider/Hospital`, `General HIH`, `HIH Carveout`. There is no mutual-exclusion rule to implement — Vendor Type is a plain single-select.
 
 ### 3.3 CNA Fee is a column, not a Fee Type
 
@@ -102,7 +102,7 @@ Additional dynamic behavior:
 
 Two order-level checkboxes, both above the row table:
 
-1. **"Approval required for all PPT fees"** (`noPPT`, maps to the AC's "No PPT fee approvals for this Order")
+1. **"Approval required for all PPT fees"** (`noPPT`)
    - When checked: the entire row table and "+ Add row" control are hidden (not just disabled — not rendered at all). Row *data* is retained in memory but ignored. The fee text preview becomes the fixed string `"Approval required for all PPT fees"`, overriding everything else including `approvalRequiredPerPage` and all row content. Row validation and duplicate-row validation are both skipped entirely when this is checked (Review proceeds unconditionally).
    - When unchecked: form reverts to the row table with whatever row data was already in state.
 
