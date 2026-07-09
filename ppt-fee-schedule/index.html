@@ -178,12 +178,16 @@ function fmtAmount(n) {
   return "$" + rounded.toFixed(2);
 }
 
+function hasVendorNameField(vendorType) {
+  return vendorType === "HIH Carveout" || vendorType === "Exception";
+}
+
 function vendorLabel(row) {
   switch (row.vendorType) {
     case "Provider/Physician": return "Prov";
     case "Hospital": return "Hosp";
     case "General HIH": return "HIH";
-    case "Exception": return "Exception";
+    case "Exception": return row.vendorName.trim() || "Exception";
     case "HIH Carveout": return row.vendorName.trim() || "Unnamed Vendor";
     default: return row.vendorType;
   }
@@ -195,7 +199,7 @@ function paymentLabel(pt) {
   return pt;
 }
 
-function isCarveoutName(row) { return row.vendorType === "HIH Carveout"; }
+function isCarveoutName(row) { return hasVendorNameField(row.vendorType); }
 
 function buildFeeText() {
   if (state.noPPT) return "Approval required for all PPT fees";
@@ -285,7 +289,7 @@ function validateRows() {
   const errors = {};
   state.rows.forEach(r => {
     const rowErrs = {};
-    if (r.vendorType === "HIH Carveout" && !r.vendorName.trim()) {
+    if (hasVendorNameField(r.vendorType) && !r.vendorName.trim()) {
       rowErrs.vendorName = "Required";
     }
     if (r.paymentType !== "Exclusion" && (r.amount === "" || r.amount === null || isNaN(parseFloat(r.amount)))) {
@@ -371,7 +375,7 @@ function renderForm() {
 function rowHtml(r, i) {
   const err = state.errors[r.id] || {};
   const payOptions = paymentTypeOptions(r.vendorType);
-  const showVendorName = r.vendorType === "HIH Carveout";
+  const showVendorName = hasVendorNameField(r.vendorType);
   const showAmount = r.paymentType !== "Exclusion";
   const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
 
@@ -453,7 +457,7 @@ function attachFormListeners() {
       if (field === "vendorType") {
         const allowed = paymentTypeOptions(row.vendorType);
         if (!allowed.includes(row.paymentType)) row.paymentType = "Pre+Post Pay";
-        if (row.vendorType !== "HIH Carveout") row.vendorName = "";
+        if (!hasVendorNameField(row.vendorType)) row.vendorName = "";
       }
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
       if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; }
@@ -486,7 +490,7 @@ function renderReview() {
   const rowsSummary = state.noPPT ? "" : state.rows.map((r, i) => `
     <div class="review-row">
       <div class="idx">${i + 1}.</div>
-      <div class="chip">${r.vendorType}${r.vendorType === "HIH Carveout" && r.vendorName ? ": " + escapeHtml(r.vendorName) : ""}</div>
+      <div class="chip">${r.vendorType}${hasVendorNameField(r.vendorType) && r.vendorName ? ": " + escapeHtml(r.vendorName) : ""}</div>
       <div class="chip">${r.paymentType}</div>
       <div class="chip">${r.feeType}</div>
       ${r.paymentType !== "Exclusion" ? `<div class="chip">$ ${escapeHtml(r.amount || "0")}</div>` : ""}
