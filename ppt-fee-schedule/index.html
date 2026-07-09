@@ -59,7 +59,8 @@
   }
   table.rows input[type="number"] { min-width: 80px; }
   table.rows select:focus, table.rows input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
-  .cell-empty { color: #b7bcc4; font-size: 12px; padding-top: 8px; }
+  .cell-empty { color: #b7bcc4; font-size: 12px; padding-top: 8px; display: block; }
+  .ro-value { display: block; padding: 6px 7px; font-size: 13px; color: var(--ink); }
   .rm-btn {
     background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;
     padding: 4px 6px; border-radius: 6px; line-height: 1;
@@ -376,18 +377,7 @@ function renderForm() {
 
       ${state.noPPT ? "" : `
         <table class="rows">
-          <thead>
-            <tr>
-              <th style="width:22px"></th>
-              <th style="width:14%">Vendor Type</th>
-              <th style="width:13%">Payment Type</th>
-              <th style="width:14%">Vendor Name</th>
-              <th style="width:11%">CNA Fee</th>
-              <th style="width:11%">PPT Fee Type</th>
-              <th style="width:11%">PPT Fee Amount</th>
-              <th style="width:11%">Max $ Amount</th>
-            </tr>
-          </thead>
+          ${rowsTableHeadHtml()}
           <tbody id="rowsBody">
             ${rowsHtml}
           </tbody>
@@ -409,6 +399,23 @@ function renderForm() {
   `;
 
   attachFormListeners();
+}
+
+function rowsTableHeadHtml() {
+  return `
+    <thead>
+      <tr>
+        <th style="width:22px"></th>
+        <th style="width:14%">Vendor Type</th>
+        <th style="width:13%">Payment Type</th>
+        <th style="width:14%">Vendor Name</th>
+        <th style="width:11%">CNA Fee</th>
+        <th style="width:11%">PPT Fee Type</th>
+        <th style="width:11%">PPT Fee Amount</th>
+        <th style="width:11%">Max $ Amount</th>
+      </tr>
+    </thead>
+  `;
 }
 
 function rowHtml(r, i) {
@@ -622,18 +629,33 @@ function checkDuplicateAndRemove(rowId) {
   render();
 }
 
+function reviewRowHtml(r) {
+  const showVendorName = hasVendorNameField(r.vendorType);
+  const showFeeType = r.paymentType !== "Exclusion";
+  const showAmount = r.paymentType !== "Exclusion";
+  const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
+  const showCna = hasCnaField(r.vendorType) && r.paymentType !== "Exclusion";
+
+  const cell = (shown, value) => shown
+    ? `<span class="ro-value">${value !== "" && value !== null && value !== undefined ? escapeHtml(value) : "—"}</span>`
+    : `<span class="cell-empty">—</span>`;
+
+  return `
+    <tr>
+      <td></td>
+      <td>${cell(true, r.vendorType)}</td>
+      <td>${cell(true, r.paymentType)}</td>
+      <td>${cell(showVendorName, r.vendorName)}</td>
+      <td>${cell(showCna, r.cnaFee)}</td>
+      <td>${cell(showFeeType, r.feeType)}</td>
+      <td>${cell(showAmount, r.amount)}</td>
+      <td>${cell(showMax, r.maxAmount)}</td>
+    </tr>
+  `;
+}
+
 function renderReview() {
-  const rowsSummary = state.noPPT ? "" : state.rows.map((r, i) => `
-    <div class="review-row">
-      <div class="idx">${i + 1}.</div>
-      <div class="chip">${r.vendorType}${hasVendorNameField(r.vendorType) && r.vendorName ? ": " + escapeHtml(r.vendorName) : ""}</div>
-      <div class="chip">${r.paymentType}</div>
-      ${r.paymentType !== "Exclusion" ? `<div class="chip">${r.feeType}</div>` : ""}
-      ${r.paymentType !== "Exclusion" ? `<div class="chip">$ ${escapeHtml(r.amount || "0")}</div>` : ""}
-      ${hasCnaField(r.vendorType) && r.paymentType !== "Exclusion" && r.cnaFee ? `<div class="chip">CNA $ ${escapeHtml(r.cnaFee)}</div>` : ""}
-      ${r.feeType === "Per Page" && r.paymentType !== "Exclusion" && r.maxAmount ? `<div class="chip">Max $ ${escapeHtml(r.maxAmount)}</div>` : ""}
-    </div>
-  `).join("");
+  const rowsHtml = state.noPPT ? "" : state.rows.map(reviewRowHtml).join("");
 
   app.innerHTML = `
     <header class="top">
@@ -648,8 +670,8 @@ function renderReview() {
     <div class="card">
       <h2 style="font-size:15px;margin-top:0;">Review fee schedule</h2>
       ${state.noPPT
-        ? `<p style="color:var(--sub);font-size:13px;">No PPT fee approvals for this Order.</p>`
-        : `<div>${rowsSummary}</div>`}
+        ? `<p style="color:var(--sub);font-size:13px;">Approval required for all PPT fees.</p>`
+        : `<table class="rows">${rowsTableHeadHtml()}<tbody>${rowsHtml}</tbody></table>`}
 
       <div class="preview-box">
         <div class="label">Fee Text Preview (as it will appear downstream)</div>
@@ -682,7 +704,7 @@ function renderHelp() {
     <div class="card">
       <div class="help-box">
         <p style="margin-top:0;"><strong>Need help with this fee schedule?</strong></p>
-        <p>Please submit a PPI ticket describing the issue, and post in <code>#support-switchboard-cutover</code> in Slack so the Pipelines team can follow up.</p>
+        <p>Please submit a PPI ticket describing the issue, and post in <code>#support-switchboard-cutover</code> in Slack.</p>
       </div>
     </div>
 
