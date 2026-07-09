@@ -416,6 +416,7 @@ function rowHtml(r, i) {
   const payOptions = paymentTypeOptions(r.vendorType);
   const feeTypeOptions = state.approvalRequiredPerPage ? FEE_TYPES.filter(ft => ft !== "Per Page") : FEE_TYPES;
   const showVendorName = hasVendorNameField(r.vendorType);
+  const showFeeType = r.paymentType !== "Exclusion";
   const showAmount = r.paymentType !== "Exclusion";
   const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
   const showCna = hasCnaField(r.vendorType) && r.paymentType !== "Exclusion";
@@ -447,7 +448,9 @@ function rowHtml(r, i) {
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
-        <select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOptions, r.feeType)}</select>
+        ${showFeeType
+          ? `<select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOptions, r.feeType)}</select>`
+          : `<span class="cell-empty">—</span>`}
       </td>
       <td class="${err.amount ? "err" : ""}">
         ${showAmount
@@ -474,6 +477,7 @@ function assumptionsHtml() {
         <li>Vendor Type is Provider/Hospital, General HIH, or HIH Carveout (Exception removed per feedback; Provider/Physician and Hospital merged into one option).</li>
         <li>A row is flagged as a duplicate (alert shown immediately, row auto-removed, and blocked on Review) if another row shares the same Vendor Type/Name, Payment Type, and PPT Fee Type — or, separately, if two rows share the same Vendor Name at all, regardless of Payment Type or PPT Fee Type.</li>
         <li>Checking "Approval required for all per page fees" removes Per Page from the PPT Fee Type options and resets any existing Per Page rows to Per Chart, since a per-row Per Page amount can no longer be entered.</li>
+        <li>When Payment Type = Exclusion, PPT Fee Type/Amount/CNA Fee/Max $ Amount are all hidden — an excluded vendor doesn't need a fee type, just the "not approved" flag.</li>
         <li>Vendor Name is free text (HIH vendor table doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
         <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
       </ul>
@@ -527,7 +531,7 @@ function attachFormListeners() {
         if (!hasCnaField(row.vendorType)) row.cnaFee = "";
       }
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
-      if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; row.cnaFee = ""; }
+      if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; row.cnaFee = ""; row.feeType = "Per Chart"; }
       render();
       if (field === "vendorType" || field === "paymentType" || field === "feeType") checkDuplicateAndRemove(row.id);
     });
@@ -564,7 +568,8 @@ function attachFormListeners() {
 
 function rowKey(r) {
   const vendorKey = r.vendorType + (hasVendorNameField(r.vendorType) ? "|" + r.vendorName.trim().toLowerCase() : "");
-  return vendorKey + "||" + r.paymentType + "||" + r.feeType;
+  const feeTypeKey = r.paymentType === "Exclusion" ? "" : r.feeType;
+  return vendorKey + "||" + r.paymentType + "||" + feeTypeKey;
 }
 
 function vendorNameOf(r) {
@@ -623,7 +628,7 @@ function renderReview() {
       <div class="idx">${i + 1}.</div>
       <div class="chip">${r.vendorType}${hasVendorNameField(r.vendorType) && r.vendorName ? ": " + escapeHtml(r.vendorName) : ""}</div>
       <div class="chip">${r.paymentType}</div>
-      <div class="chip">${r.feeType}</div>
+      ${r.paymentType !== "Exclusion" ? `<div class="chip">${r.feeType}</div>` : ""}
       ${r.paymentType !== "Exclusion" ? `<div class="chip">$ ${escapeHtml(r.amount || "0")}</div>` : ""}
       ${hasCnaField(r.vendorType) && r.paymentType !== "Exclusion" && r.cnaFee ? `<div class="chip">CNA $ ${escapeHtml(r.cnaFee)}</div>` : ""}
       ${r.feeType === "Per Page" && r.paymentType !== "Exclusion" && r.maxAmount ? `<div class="chip">Max $ ${escapeHtml(r.maxAmount)}</div>` : ""}
