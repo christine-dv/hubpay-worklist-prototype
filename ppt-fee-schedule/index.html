@@ -150,7 +150,7 @@ let rowSeq = 1;
 function newRow() {
   return {
     id: rowSeq++,
-    vendorType: "Provider/Hospital",
+    vendorType: "",
     vendorName: "",
     paymentType: "Pre+Post Pay",
     feeType: "Per Chart",
@@ -212,8 +212,9 @@ function vendorCategory(vendorType) {
 function buildFeeText() {
   if (state.noPPT) return "Approval required for all PPT fees";
 
-  const included = state.rows.filter(r => r.paymentType !== "Exclusion" && (r.amount !== "" || r.feeType));
-  const excluded = state.rows.filter(r => r.paymentType === "Exclusion");
+  const rowsWithVendor = state.rows.filter(r => r.vendorType);
+  const included = rowsWithVendor.filter(r => r.paymentType !== "Exclusion" && (r.amount !== "" || r.feeType));
+  const excluded = rowsWithVendor.filter(r => r.paymentType === "Exclusion");
 
   function isBlankOrZero(v) {
     return v === "" || v === null || v === undefined || isNaN(parseFloat(v)) || parseFloat(v) === 0;
@@ -319,6 +320,9 @@ function validateRows() {
   const errors = {};
   state.rows.forEach(r => {
     const rowErrs = {};
+    if (!r.vendorType) {
+      rowErrs.vendorType = "Required";
+    }
     if (hasVendorNameField(r.vendorType) && !r.vendorName.trim()) {
       rowErrs.vendorName = "Required";
     }
@@ -421,8 +425,12 @@ function rowHtml(r, i) {
       <td>
         <button class="rm-btn" data-action="remove" data-row-id="${r.id}" ${state.rows.length === 1 ? "disabled" : ""} title="Remove row">✕</button>
       </td>
-      <td>
-        <select data-field="vendorType" data-row-id="${r.id}">${optionsHtml(VENDOR_TYPES, r.vendorType)}</select>
+      <td class="${err.vendorType ? "err" : ""}">
+        <select data-field="vendorType" data-row-id="${r.id}">
+          <option value="" ${r.vendorType === "" ? "selected" : ""} disabled hidden>Select…</option>
+          ${optionsHtml(VENDOR_TYPES, r.vendorType)}
+        </select>
+        ${err.vendorType ? `<span class="field-error">${err.vendorType}</span>` : ""}
       </td>
       <td>
         <select data-field="paymentType" data-row-id="${r.id}">${optionsHtml(payOptions, r.paymentType)}</select>
@@ -492,9 +500,10 @@ function attachFormListeners() {
 
   const addBtn = document.getElementById("addRowBtn");
   if (addBtn) addBtn.addEventListener("click", () => {
-    state.rows.push(newRow());
+    const row = newRow();
+    state.rows.push(row);
     render();
-    warnIfDuplicate();
+    checkDuplicateAndRemove(row.id);
   });
 
   document.querySelectorAll('[data-action="remove"]').forEach(btn => {
@@ -520,7 +529,7 @@ function attachFormListeners() {
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
       if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; row.cnaFee = ""; }
       render();
-      if (field === "vendorType" || field === "paymentType" || field === "feeType") warnIfDuplicate();
+      if (field === "vendorType" || field === "paymentType" || field === "feeType") checkDuplicateAndRemove(row.id);
     });
   });
 
@@ -536,7 +545,7 @@ function attachFormListeners() {
   });
 
   document.querySelectorAll('input[data-field="vendorName"]').forEach(inp => {
-    inp.addEventListener("change", () => warnIfDuplicate());
+    inp.addEventListener("change", () => checkDuplicateAndRemove(Number(inp.dataset.rowId)));
   });
 
   document.getElementById("reviewBtn").addEventListener("click", () => {
@@ -553,21 +562,34 @@ function attachFormListeners() {
   });
 }
 
-function warnIfDuplicate() {
-  if (!state.noPPT && hasDuplicateRows()) {
-    alert("Duplicate row: two or more rows have the same Vendor Type/Name, Payment Type, and PPT Fee Type. Please adjust one of them before continuing.");
-  }
+function rowKey(r) {
+  const vendorKey = r.vendorType + (hasVendorNameField(r.vendorType) ? "|" + r.vendorName.trim().toLowerCase() : "");
+  return vendorKey + "||" + r.paymentType + "||" + r.feeType;
 }
 
 function hasDuplicateRows() {
   const seen = new Set();
   for (const r of state.rows) {
-    const vendorKey = r.vendorType + (hasVendorNameField(r.vendorType) ? "|" + r.vendorName.trim().toLowerCase() : "");
-    const key = vendorKey + "||" + r.paymentType + "||" + r.feeType;
+    if (!r.vendorType) continue; // no vendor picked yet — nothing to compare
+    const key = rowKey(r);
     if (seen.has(key)) return true;
     seen.add(key);
   }
   return false;
+}
+
+function checkDuplicateAndRemove(rowId) {
+  if (state.noPPT) return;
+  const target = state.rows.find(r => r.id === rowId);
+  if (!target || !target.vendorType) return; // no vendor picked yet — nothing to compare
+  const key = rowKey(target);
+  const isDup = state.rows.some(r => r.id !== rowId && r.vendorType && rowKey(r) === key);
+  if (isDup) {
+    alert("Duplicate row: another row already has this Vendor Type/Name, Payment Type, and PPT Fee Type. This row will be removed.");
+    state.rows = state.rows.filter(r => r.id !== rowId);
+    delete state.errors[rowId];
+    render();
+  }
 }
 
 function renderReview() {
