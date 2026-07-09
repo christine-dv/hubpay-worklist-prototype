@@ -410,6 +410,7 @@ function renderForm() {
 function rowHtml(r, i) {
   const err = state.errors[r.id] || {};
   const payOptions = paymentTypeOptions(r.vendorType);
+  const feeTypeOptions = state.approvalRequiredPerPage ? FEE_TYPES.filter(ft => ft !== "Per Page") : FEE_TYPES;
   const showVendorName = hasVendorNameField(r.vendorType);
   const showAmount = r.paymentType !== "Exclusion";
   const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
@@ -438,7 +439,7 @@ function rowHtml(r, i) {
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
-        <select data-field="feeType" data-row-id="${r.id}">${optionsHtml(FEE_TYPES, r.feeType)}</select>
+        <select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOptions, r.feeType)}</select>
       </td>
       <td class="${err.amount ? "err" : ""}">
         ${showAmount
@@ -463,7 +464,8 @@ function assumptionsHtml() {
         <li>Fee Text Preview formula was reverse-engineered from sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: the schedule's shared Payment Type always leads the string; Provider/Hospital groups are ordered before HIH-related groups; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; Per Page fees get a trailing "pp" (e.g. "$1pp"); CNA fees are labeled "CNA $X"; blank or $0 amounts are omitted entirely; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
         <li>CNA Fee is its own column (rather than a Fee Type option) on every row when Payment Type isn't Exclusion — a single row now captures both the primary fee and the CNA fee, no duplicate row needed.</li>
         <li>Vendor Type is Provider/Hospital, General HIH, or HIH Carveout (Exception removed per feedback; Provider/Physician and Hospital merged into one option).</li>
-        <li>A row is flagged as a duplicate (blocked with an alert on Review) if another row shares the same Vendor Type/Name, Payment Type, and PPT Fee Type.</li>
+        <li>A row is flagged as a duplicate (alert shown immediately, and blocked on Review) if another row shares the same Vendor Type/Name, Payment Type, and PPT Fee Type.</li>
+        <li>Checking "Approval required for all per page fees" removes Per Page from the PPT Fee Type options and resets any existing Per Page rows to Per Chart, since a per-row Per Page amount can no longer be entered.</li>
         <li>Vendor Name is free text (HIH vendor table doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
         <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
       </ul>
@@ -480,6 +482,11 @@ function attachFormListeners() {
   const perPageCb = document.getElementById("approvalRequiredPerPage");
   if (perPageCb) perPageCb.addEventListener("change", e => {
     state.approvalRequiredPerPage = e.target.checked;
+    if (state.approvalRequiredPerPage) {
+      state.rows.forEach(r => {
+        if (r.feeType === "Per Page") { r.feeType = "Per Chart"; r.maxAmount = ""; }
+      });
+    }
     render();
   });
 
@@ -487,6 +494,7 @@ function attachFormListeners() {
   if (addBtn) addBtn.addEventListener("click", () => {
     state.rows.push(newRow());
     render();
+    warnIfDuplicate();
   });
 
   document.querySelectorAll('[data-action="remove"]').forEach(btn => {
@@ -512,6 +520,7 @@ function attachFormListeners() {
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
       if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; row.cnaFee = ""; }
       render();
+      if (field === "vendorType" || field === "paymentType" || field === "feeType") warnIfDuplicate();
     });
   });
 
@@ -526,6 +535,10 @@ function attachFormListeners() {
     });
   });
 
+  document.querySelectorAll('input[data-field="vendorName"]').forEach(inp => {
+    inp.addEventListener("change", () => warnIfDuplicate());
+  });
+
   document.getElementById("reviewBtn").addEventListener("click", () => {
     if (!state.noPPT && hasDuplicateRows()) {
       alert("Duplicate row detected: two or more rows have the same Vendor Type/Name, Payment Type, and PPT Fee Type. Please remove or adjust the duplicate before continuing.");
@@ -538,6 +551,12 @@ function attachFormListeners() {
       render();
     }
   });
+}
+
+function warnIfDuplicate() {
+  if (!state.noPPT && hasDuplicateRows()) {
+    alert("Duplicate row: two or more rows have the same Vendor Type/Name, Payment Type, and PPT Fee Type. Please adjust one of them before continuing.");
+  }
 }
 
 function hasDuplicateRows() {
