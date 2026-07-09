@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HubPay — Worklist Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+    color: #1e293b;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: #1a2535;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  #sidebar-header {
+    padding: 20px 16px 8px;
+  }
+
+  #sidebar-title {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  #prototype-badge {
+    display: inline-block;
+    margin-top: 6px;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .nav-group-label {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 16px 16px 4px;
+  }
+
+  .nav-separator {
+    border: none;
+    border-top: 1px solid #2d3f57;
+    margin: 8px 12px;
+  }
+
+  .nav-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: left;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .nav-item:hover {
+    background: #243044;
+    color: #e2e8f0;
+  }
+
+  .nav-item.active {
+    background: #243044;
+    color: #fff;
+    border-left-color: #3b82f6;
+    font-weight: 600;
+  }
+
+  #sidebar-spacer { flex: 1; }
+
+  #nav-logout {
+    border-top: 1px solid #2d3f57;
+    margin-top: 8px;
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: left;
+    padding: 12px 16px;
+    cursor: pointer;
+    background: none;
+    border-left: 3px solid transparent;
+    width: 100%;
+  }
+  #nav-logout:hover { background: #243044; color: #e2e8f0; }
+
+  /* ── MAIN CONTENT ── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .page {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .page.active {
+    display: flex;
+  }
+
+  .page-inner {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+  }
+
+  .page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 16px;
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { background: #2563eb; }
+
+  .btn-secondary {
+    background: #fff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+  }
+  .btn-secondary:hover { background: #f9fafb; }
+
+  /* ── DROPDOWNS ── */
+  .dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 100;
+    min-width: 170px;
+    padding: 4px 0;
+  }
+
+  .dropdown-menu.open { display: block; }
+
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+  }
+  .dropdown-item:hover { background: #f1f5f9; }
+
+  .dropdown-item.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ── FILTER CHIPS / MULTI-SELECT ── */
+  .filters-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .filter-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .filter-chip {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .filter-chip:hover { border-color: #93c5fd; }
+  .filter-chip.active {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .filter-chevron { font-size: 10px; }
+
+  .filter-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 200;
+    min-width: 200px;
+    padding: 6px 0 4px;
+  }
+  .filter-dropdown.open { display: block; }
+
+  .filter-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 12px 6px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 4px;
+  }
+
+  .filter-dropdown-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .filter-clear-btn {
+    font-size: 11px;
+    color: #3b82f6;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .filter-clear-btn:hover { color: #1d4ed8; text-decoration: underline; }
+
+  .filter-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #374151;
+  }
+  .filter-option:hover { background: #f8fafc; }
+  .filter-option input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ── SEARCH BAR ── */
+  .search-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .search-input {
+    flex: 1;
+    max-width: 440px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    background: #fff;
+    color: #374151;
+    outline: none;
+  }
+  .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+
+  .btn-search {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-search:hover { background: #f9fafb; }
+
+  .btn-clear {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: #6b7280;
+    cursor: pointer;
+  }
+  .btn-clear:hover { background: #f9fafb; color: #374151; }
+
+  /* ── SHOWING ROW ── */
+  .showing-row {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+
+  /* ── TABLE ── */
+  .table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+    font-size: 12px;
+  }
+
+  thead {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  th {
+    padding: 9px 10px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 8px 10px;
+    color: #374151;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tbody tr:hover td { background: #f8fafc; }
+
+  /* ── CHECKBOXES ── */
+  input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+  }
+
+  /* ── ACTION ICONS ── */
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    line-height: 1;
+  }
+
+  .lock-icon {
+    font-size: 14px;
+    cursor: help;
+    position: relative;
+    display: inline-block;
+  }
+
+  .lock-icon:hover::after {
+    content: "Invoice is locked";
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 200;
+    pointer-events: none;
+  }
+
+  .lock-icon:hover::before {
+    content: "";
+    position: absolute;
+    bottom: calc(120% - 5px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1e293b;
+    z-index: 200;
+    pointer-events: none;
+  }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .badge-true    { background: #dcfce7; color: #16a34a; }
+  .badge-false   { background: #fee2e2; color: #dc2626; }
+  .badge-cc      { background: #dbeafe; color: #1d4ed8; }
+  .badge-new     { background: #dcfce7; color: #16a34a; }
+  .badge-pending { background: #fef3c7; color: #d97706; }
+  .badge-action  { background: #dbeafe; color: #1d4ed8; }
+  .badge-sent    { background: #ede9fe; color: #7c3aed; }
+  .badge-paid    { background: #dcfce7; color: #15803d; }
+  .badge-denied  { background: #fee2e2; color: #dc2626; }
+
+  .badge-reason-cc       { background: #dbeafe; color: #1d4ed8; }
+  .badge-reason-atloss   { background: #fee2e2; color: #dc2626; }
+  .badge-reason-research { background: #ede9fe; color: #7c3aed; }
+
+  .badge-esc-fee { background: #fef3c7; color: #d97706; }
+  .badge-esc-w9  { background: #fee2e2; color: #dc2626; }
+  .badge-esc-cc  { background: #dbeafe; color: #1d4ed8; }
+
+  /* ── PLACEHOLDER PAGES ── */
+  .placeholder-body {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 40px 32px;
+    max-width: 600px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .placeholder-body h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 10px;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: #fff;
+    border-radius: 10px;
+    padding: 28px 32px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+  }
+
+  .modal-body {
+    font-size: 14px;
+    color: #475569;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .btn-modal-confirm {
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-modal-confirm:hover { background: #2563eb; }
+
+  .btn-modal-cancel {
+    background: #fff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-modal-cancel:hover { background: #f9fafb; }
+
+  /* ── TOAST ── */
+  #toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 240px;
+    max-width: 360px;
+    transform: translateX(120%);
+    transition: transform 0.25s ease;
+    pointer-events: auto;
+  }
+  .toast.show { transform: translateX(0); }
+
+  .toast-success { border-left: 4px solid #16a34a; color: #166534; }
+  .toast-error   { border-left: 4px solid #dc2626; color: #991b1b; }
+
+  .toast-icon { font-size: 15px; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate" style="position:fixed;inset:0;z-index:9999;background:#1a2535;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="background:#fff;border-radius:12px;padding:32px;width:280px;box-shadow:0 10px 40px rgba(0,0,0,0.3);text-align:center;">
+    <div style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:4px;">HubPay Prototype</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Enter password to continue</div>
+    <input type="password" id="pw-input" placeholder="Password" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+    <button id="pw-submit" style="width:100%;padding:10px;border:none;border-radius:6px;background:#1a2535;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Enter</button>
+    <div id="pw-error" style="color:#dc2626;font-size:12px;margin-top:8px;display:none;">Incorrect password</div>
+  </div>
+</div>
+<script>
+(function () {
+  var PASSWORD = "mango";
+  var gate = document.getElementById("pw-gate");
+  var input = document.getElementById("pw-input");
+  var error = document.getElementById("pw-error");
+
+  function tryUnlock() {
+    if (input.value === PASSWORD) {
+      gate.style.display = "none";
+    } else {
+      error.style.display = "block";
+    }
+  }
+
+  document.getElementById("pw-submit").addEventListener("click", tryUnlock);
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") tryUnlock();
+  });
+  input.focus();
+})();
+</script>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div id="sidebar-title">HubPay</div>
+    <span id="prototype-badge">Prototype</span>
+  </div>
+
+  <div class="nav-group-label">Worklist</div>
+  <button class="nav-item active" data-page="page-new">New</button>
+  <button class="nav-item" data-page="page-action">Action Needed</button>
+  <button class="nav-item" data-page="page-review">Review</button>
+  <button class="nav-item" data-page="page-pending">Pending</button>
+  <button class="nav-item" data-page="page-complete">Complete</button>
+
+  <hr class="nav-separator">
+  <div class="nav-group-label">Existing Pages</div>
+  <button class="nav-item" data-page="page-all-invoices">All Invoices</button>
+  <button class="nav-item" data-page="page-line-items">Invoice Line Items</button>
+  <button class="nav-item" data-page="page-record-search">Record Search</button>
+  <button class="nav-item" data-page="page-upload-history">Upload History</button>
+  <button class="nav-item" data-page="page-locks">Invoice Locks</button>
+
+  <div id="sidebar-spacer"></div>
+  <button id="nav-logout">Logout</button>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- ════════════════════════════════════════
+       PAGE: NEW
+  ════════════════════════════════════════ -->
+  <div id="page-new" class="page active">
+    <div class="page-inner">
+      <div class="page-title">New</div>
+
+      <div class="toolbar">
+        <button class="btn-primary">+ New Invoice</button>
+
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-new-actions">Actions ▾</button>
+          <div id="dd-new-actions" class="dropdown-menu">
+            <button class="dropdown-item disabled" data-action="send-for-payment" data-page-id="new">Send for Payment</button>
+            <button class="dropdown-item disabled" data-action="send-to-supervisor" data-page-id="new">Send to Supervisor</button>
+          </div>
+        </div>
+
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-new-export">Export ▾</button>
+          <div id="dd-new-export" class="dropdown-menu">
+            <button class="dropdown-item">CSV</button>
+            <button class="dropdown-item">JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-row" data-filter-table="tbl-new">
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="global">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Global</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="True"> True</label>
+            <label class="filter-option"><input type="checkbox" value="False"> False</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="project">Project <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="project">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Project</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="payment-method">Payment Method <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="payment-method">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Payment Method</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="ACH"> ACH</label>
+            <label class="filter-option"><input type="checkbox" value="Check"> Check</label>
+            <label class="filter-option"><input type="checkbox" value="Credit Card"> Credit Card</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="created-by">Created By <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="created-by">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Created By</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="last-updated-by">Last Updated By <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="last-updated-by">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Last Updated By</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-row" data-search-table="tbl-new">
+        <input class="search-input" type="text" placeholder="Search: Vendor Invoice Number, Payee Name...">
+        <button class="btn-clear search-clear-btn">✕</button>
+      </div>
+
+      <div class="showing-row" id="showing-new">Showing 6 of 6 items</div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="header-cb" data-table="tbl-new"></th>
+              <th>View</th>
+              <th>Edit</th>
+              <th>Last Updated By</th>
+              <th>Global</th>
+              <th>Status</th>
+              <th>Vendor Invoice Number</th>
+              <th>Coupa Vendor</th>
+              <th>Project</th>
+              <th>Project Due Date</th>
+              <th>Payment Method</th>
+              <th>CC Email</th>
+              <th>Payee Name</th>
+              <th>Invoice Amount</th>
+              <th>Received At</th>
+              <th>Created By</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-new"
+            data-col-global="4"
+            data-col-project="8"
+            data-col-payment-method="10"
+            data-col-created-by="15"
+            data-col-last-updated-by="3"
+            data-col-vendor-invoice="6"
+            data-col-payee-name="12">
+            <!-- Row 1: ACH, Global=True -->
+            <tr data-global="True" data-payment-method="ACH" data-project="Linda Nelson DDS MRA" data-created-by="g.partner1@vendor.com" data-last-updated-by="j.smith@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><span class="lock-icon">🔒</span></td>
+              <td>j.smith@datavant.com</td>
+              <td><span class="badge badge-true">True</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>30108610032006292026164945</td>
+              <td>MRO</td>
+              <td>Linda Nelson DDS MRA</td>
+              <td>2026-08-15</td>
+              <td>ACH</td>
+              <td>—</td>
+              <td>Linda Nelson DDS</td>
+              <td>$1,250.00</td>
+              <td>2026-06-28</td>
+              <td>g.partner1@vendor.com</td>
+              <td>2026-07-01</td>
+            </tr>
+            <!-- Row 2: Check, Global=False -->
+            <tr data-global="False" data-payment-method="Check" data-project="Victoria Bond MRA" data-created-by="a.carter@datavant.com" data-last-updated-by="a.carter@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>a.carter@datavant.com</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>30108610032006292026170048</td>
+              <td>Verisma</td>
+              <td>Victoria Bond MRA</td>
+              <td>2026-11-24</td>
+              <td>Check</td>
+              <td>—</td>
+              <td>Victoria Bond Medical</td>
+              <td>$875.50</td>
+              <td>2026-06-30</td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-07-01</td>
+            </tr>
+            <!-- Row 3: Credit Card, CC=true → routes to Review on Send for Payment -->
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Victoria Bond MRA" data-created-by="g.partner2@vendor.com" data-last-updated-by="s.bertley@datavant.com" data-cc-email="true">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>s.bertley@datavant.com</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>30108610032006292026051453</td>
+              <td>Ciox Health</td>
+              <td>Victoria Bond MRA</td>
+              <td>2026-11-24</td>
+              <td>Credit Card</td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>Victoria Bond MRA</td>
+              <td>$340.00</td>
+              <td>2026-06-29</td>
+              <td>g.partner2@vendor.com</td>
+              <td>2026-06-30</td>
+            </tr>
+            <!-- Row 4: ACH, Global=False -->
+            <tr data-global="False" data-payment-method="ACH" data-project="Amber Vasquez MRA" data-created-by="a.carter@datavant.com" data-last-updated-by="a.carter@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>a.carter@datavant.com</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>30108610032006262026042648</td>
+              <td>IOD Inc</td>
+              <td>Amber Vasquez MRA</td>
+              <td>2026-09-30</td>
+              <td>ACH</td>
+              <td>—</td>
+              <td>Amber Vasquez Clinic</td>
+              <td>$2,100.00</td>
+              <td>2026-06-27</td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-30</td>
+            </tr>
+            <!-- Row 5: ACH, Global=True -->
+            <tr data-global="True" data-payment-method="ACH" data-project="James Curry MRA" data-created-by="g.partner3@vendor.com" data-last-updated-by="j.smith@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>j.smith@datavant.com</td>
+              <td><span class="badge badge-true">True</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>30108610032006252026013949</td>
+              <td>DataFile</td>
+              <td>James Curry MRA</td>
+              <td>2026-10-15</td>
+              <td>ACH</td>
+              <td>—</td>
+              <td>James Curry MD</td>
+              <td>$650.00</td>
+              <td>2026-06-25</td>
+              <td>g.partner3@vendor.com</td>
+              <td>2026-06-29</td>
+            </tr>
+            <!-- Row 6: Credit Card, CC=true → routes to Review on Send for Payment -->
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Highmark MRA" data-created-by="s.bertley@datavant.com" data-last-updated-by="s.bertley@datavant.com" data-cc-email="true">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>s.bertley@datavant.com</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>30108610032006242026089201</td>
+              <td>MRO</td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td>Credit Card</td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>Highmark Health</td>
+              <td>$4,500.00</td>
+              <td>2026-06-24</td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-28</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PAGE: ACTION NEEDED
+  ════════════════════════════════════════ -->
+  <div id="page-action" class="page">
+    <div class="page-inner">
+      <div class="page-title">Action Needed</div>
+
+      <div class="toolbar">
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-action-actions">Actions ▾</button>
+          <div id="dd-action-actions" class="dropdown-menu">
+            <button class="dropdown-item disabled" data-action="send-for-payment" data-page-id="action">Send for Payment</button>
+            <button class="dropdown-item disabled" data-action="send-to-supervisor" data-page-id="action">Send to Supervisor</button>
+          </div>
+        </div>
+
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-action-export">Export ▾</button>
+          <div id="dd-action-export" class="dropdown-menu">
+            <button class="dropdown-item">CSV</button>
+            <button class="dropdown-item">JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-row" data-filter-table="tbl-action">
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="global">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Global</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="True"> True</label>
+            <label class="filter-option"><input type="checkbox" value="False"> False</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="project">Project <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="project">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Project</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="payment-method">Payment Method <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="payment-method">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Payment Method</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="ACH"> ACH</label>
+            <label class="filter-option"><input type="checkbox" value="Check"> Check</label>
+            <label class="filter-option"><input type="checkbox" value="Credit Card"> Credit Card</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="last-updated-by">Last Updated By <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="last-updated-by">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Last Updated By</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-row" data-search-table="tbl-action">
+        <input class="search-input" type="text" placeholder="Search: Vendor Invoice Number, Payee Name...">
+        <button class="btn-clear search-clear-btn">✕</button>
+      </div>
+
+      <div class="showing-row" id="showing-action">Showing 5 of 5 items</div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="header-cb" data-table="tbl-action"></th>
+              <th>View</th>
+              <th>Edit</th>
+              <th>Status</th>
+              <th>CC Email</th>
+              <th>Payment Method</th>
+              <th>Project</th>
+              <th>Project Due Date</th>
+              <th>Vendor Invoice Number</th>
+              <th>Coupa Vendor</th>
+              <th>Payee Name</th>
+              <th>Invoice Amount</th>
+              <th>Received At</th>
+              <th>Last Updated By</th>
+              <th>Last Updated</th>
+              <th>Global</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-action"
+            data-col-global="15"
+            data-col-project="6"
+            data-col-payment-method="5"
+            data-col-last-updated-by="13"
+            data-col-vendor-invoice="8"
+            data-col-payee-name="10">
+            <!-- Row 1: Credit Card, CC=true -->
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Linda Nelson DDS MRA" data-last-updated-by="a.carter@datavant.com" data-cc-email="true">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><span class="lock-icon">🔒</span></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>Credit Card</td>
+              <td>Linda Nelson DDS MRA</td>
+              <td>2026-08-15</td>
+              <td>30108610032006182026001122</td>
+              <td>MRO</td>
+              <td>Linda Nelson DDS</td>
+              <td>$1,800.00</td>
+              <td>2026-06-15</td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-07-01</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+            <!-- Row 2: ACH, Global=True -->
+            <tr data-global="True" data-payment-method="ACH" data-project="Victoria Bond MRA" data-last-updated-by="s.bertley@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td>—</td>
+              <td>ACH</td>
+              <td>Victoria Bond MRA</td>
+              <td>2026-11-24</td>
+              <td>30108610032006172026003344</td>
+              <td>Verisma</td>
+              <td>Victoria Bond Medical</td>
+              <td>$425.00</td>
+              <td>2026-06-17</td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-30</td>
+              <td><span class="badge badge-true">True</span></td>
+            </tr>
+            <!-- Row 3: Credit Card, CC=true -->
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Highmark MRA" data-last-updated-by="a.carter@datavant.com" data-cc-email="true">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>Credit Card</td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td>30108610032006162026005566</td>
+              <td>Ciox Health</td>
+              <td>Highmark Health</td>
+              <td>$3,200.00</td>
+              <td>2026-06-16</td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-30</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+            <!-- Row 4: Check, Global=False -->
+            <tr data-global="False" data-payment-method="Check" data-project="Amber Vasquez MRA" data-last-updated-by="s.bertley@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td>—</td>
+              <td>Check</td>
+              <td>Amber Vasquez MRA</td>
+              <td>2026-09-30</td>
+              <td>30108610032006152026007788</td>
+              <td>IOD Inc</td>
+              <td>Amber Vasquez Clinic</td>
+              <td>$780.00</td>
+              <td>2026-06-14</td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-29</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+            <!-- Row 5: ACH, Global=True -->
+            <tr data-global="True" data-payment-method="ACH" data-project="James Curry MRA" data-last-updated-by="j.smith@datavant.com" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td>—</td>
+              <td>ACH</td>
+              <td>James Curry MRA</td>
+              <td>2026-10-15</td>
+              <td>30108610032006142026009900</td>
+              <td>DataFile</td>
+              <td>James Curry MD</td>
+              <td>$1,100.00</td>
+              <td>2026-06-12</td>
+              <td>j.smith@datavant.com</td>
+              <td>2026-06-28</td>
+              <td><span class="badge badge-true">True</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PAGE: REVIEW
+  ════════════════════════════════════════ -->
+  <div id="page-review" class="page">
+    <div class="page-inner">
+      <div class="page-title">Review</div>
+
+      <div class="toolbar">
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-review-actions">Actions ▾</button>
+          <div id="dd-review-actions" class="dropdown-menu">
+            <button class="dropdown-item disabled" data-action="send-for-payment" data-page-id="review">Send for Payment</button>
+            <button class="dropdown-item disabled" data-action="cc-sent-for-payment" data-page-id="review">CC Sent for Payment</button>
+          </div>
+        </div>
+
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-review-export">Export ▾</button>
+          <div id="dd-review-export" class="dropdown-menu">
+            <button class="dropdown-item">CSV</button>
+            <button class="dropdown-item">JSON</button>
+            <button class="dropdown-item">Export CC Invoices</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-row" data-filter-table="tbl-review">
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="global">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Global</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="True"> True</label>
+            <label class="filter-option"><input type="checkbox" value="False"> False</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="project">Project <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="project">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Project</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="payment-method">Payment Method <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="payment-method">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Payment Method</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="ACH"> ACH</label>
+            <label class="filter-option"><input type="checkbox" value="Check"> Check</label>
+            <label class="filter-option"><input type="checkbox" value="Credit Card"> Credit Card</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="last-updated-by">Last Updated By <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="last-updated-by">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Last Updated By</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="reason-for-review">Reason For Review <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="reason-for-review">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Reason For Review</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="At-Loss Review"> At-Loss Review</label>
+            <label class="filter-option"><input type="checkbox" value="Credit Card Payment"> Credit Card Payment</label>
+            <label class="filter-option"><input type="checkbox" value="Research"> Research</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-row" data-search-table="tbl-review">
+        <input class="search-input" type="text" placeholder="Search: Vendor Invoice Number, Payee Name...">
+        <button class="btn-clear search-clear-btn">✕</button>
+      </div>
+
+      <div class="showing-row" id="showing-review">Showing 5 of 5 items</div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="header-cb" data-table="tbl-review"></th>
+              <th>View</th>
+              <th>Edit</th>
+              <th>Last Updated By</th>
+              <th>Last Updated</th>
+              <th>Reason For Review</th>
+              <th>Status</th>
+              <th>Project</th>
+              <th>Project Due Date</th>
+              <th>Global</th>
+              <th>Payment Method</th>
+              <th>CC Email</th>
+              <th>Vendor Invoice Number</th>
+              <th>Coupa Vendor</th>
+              <th>Payee Name</th>
+              <th>Invoice Amount</th>
+              <th>Received At</th>
+              <th>Created By</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-review"
+            data-col-global="9"
+            data-col-project="7"
+            data-col-payment-method="10"
+            data-col-last-updated-by="3"
+            data-col-reason-for-review="5"
+            data-col-vendor-invoice="12"
+            data-col-payee-name="14">
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Linda Nelson DDS MRA" data-last-updated-by="g.harrison@datavant.com" data-reason-for-review="Credit Card Payment" data-cc-email="true">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><span class="lock-icon">🔒</span></td>
+              <td>g.harrison@datavant.com</td>
+              <td>2026-07-01</td>
+              <td><span class="badge badge-reason-cc">Credit Card Payment</span></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td>Linda Nelson DDS MRA</td>
+              <td>2026-08-15</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>Credit Card</td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>30108610032006202026011111</td>
+              <td>MRO</td>
+              <td>Linda Nelson DDS</td>
+              <td>$2,400.00</td>
+              <td>2026-06-20</td>
+              <td>a.carter@datavant.com</td>
+            </tr>
+            <tr data-global="True" data-payment-method="ACH" data-project="Victoria Bond MRA" data-last-updated-by="g.harrison@datavant.com" data-reason-for-review="At-Loss Review" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>g.harrison@datavant.com</td>
+              <td>2026-06-30</td>
+              <td><span class="badge badge-reason-atloss">At-Loss Review</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>Victoria Bond MRA</td>
+              <td>2026-11-24</td>
+              <td><span class="badge badge-true">True</span></td>
+              <td>ACH</td>
+              <td>—</td>
+              <td>30108610032006192026022222</td>
+              <td>Verisma</td>
+              <td>Victoria Bond Medical</td>
+              <td>$950.00</td>
+              <td>2026-06-19</td>
+              <td>g.partner1@vendor.com</td>
+            </tr>
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Highmark MRA" data-last-updated-by="g.harrison@datavant.com" data-reason-for-review="Credit Card Payment" data-cc-email="true">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>g.harrison@datavant.com</td>
+              <td>2026-06-30</td>
+              <td><span class="badge badge-reason-cc">Credit Card Payment</span></td>
+              <td><span class="badge badge-action">Action Needed</span></td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>Credit Card</td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>30108610032006182026033333</td>
+              <td>Ciox Health</td>
+              <td>Highmark Health</td>
+              <td>$5,100.00</td>
+              <td>2026-06-18</td>
+              <td>s.bertley@datavant.com</td>
+            </tr>
+            <tr data-global="False" data-payment-method="Check" data-project="Amber Vasquez MRA" data-last-updated-by="g.harrison@datavant.com" data-reason-for-review="Research" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>g.harrison@datavant.com</td>
+              <td>2026-06-29</td>
+              <td><span class="badge badge-reason-research">Research</span></td>
+              <td><span class="badge badge-new">New</span></td>
+              <td>Amber Vasquez MRA</td>
+              <td>2026-09-30</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>Check</td>
+              <td>—</td>
+              <td>30108610032006172026044444</td>
+              <td>IOD Inc</td>
+              <td>Amber Vasquez Clinic</td>
+              <td>$620.00</td>
+              <td>2026-06-17</td>
+              <td>a.carter@datavant.com</td>
+            </tr>
+            <tr data-global="True" data-payment-method="ACH" data-project="James Curry MRA" data-last-updated-by="g.harrison@datavant.com" data-reason-for-review="At-Loss Review" data-cc-email="false">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>g.harrison@datavant.com</td>
+              <td>2026-06-28</td>
+              <td><span class="badge badge-reason-atloss">At-Loss Review</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>James Curry MRA</td>
+              <td>2026-10-15</td>
+              <td><span class="badge badge-true">True</span></td>
+              <td>ACH</td>
+              <td>—</td>
+              <td>30108610032006162026055555</td>
+              <td>DataFile</td>
+              <td>James Curry MD</td>
+              <td>$1,350.00</td>
+              <td>2026-06-16</td>
+              <td>g.partner2@vendor.com</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PAGE: PENDING
+  ════════════════════════════════════════ -->
+  <div id="page-pending" class="page">
+    <div class="page-inner">
+      <div class="page-title">Pending</div>
+
+      <div class="toolbar">
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-pending-export">Export ▾</button>
+          <div id="dd-pending-export" class="dropdown-menu">
+            <button class="dropdown-item">CSV</button>
+            <button class="dropdown-item">JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-row" data-filter-table="tbl-pending">
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="global">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Global</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="True"> True</label>
+            <label class="filter-option"><input type="checkbox" value="False"> False</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="project">Project <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="project">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Project</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="payment-method">Payment Method <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="payment-method">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Payment Method</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="ACH"> ACH</label>
+            <label class="filter-option"><input type="checkbox" value="Check"> Check</label>
+            <label class="filter-option"><input type="checkbox" value="Credit Card"> Credit Card</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="escalation-reason">Escalation Reason <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="escalation-reason">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Escalation Reason</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="Outside Payment Terms"> Outside Payment Terms</label>
+            <label class="filter-option"><input type="checkbox" value="Missing W9"> Missing W9</label>
+            <label class="filter-option"><input type="checkbox" value="Deadline Restriction"> Deadline Restriction</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-row" data-search-table="tbl-pending">
+        <input class="search-input" type="text" placeholder="Search: Vendor Invoice Number, Payee Name...">
+        <button class="btn-clear search-clear-btn">✕</button>
+      </div>
+
+      <div class="showing-row" id="showing-pending">Showing 6 of 6 items</div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="header-cb" data-table="tbl-pending"></th>
+              <th>View</th>
+              <th>Edit</th>
+              <th>Last Updated By</th>
+              <th>Last Updated</th>
+              <th>Escalation Reason</th>
+              <th>Status</th>
+              <th>CC Email</th>
+              <th>Payment Method</th>
+              <th>Project</th>
+              <th>Project Due Date</th>
+              <th>Invoice Amount</th>
+              <th>Vendor Invoice Number</th>
+              <th>Coupa Vendor</th>
+              <th>Payee Name</th>
+              <th>Received At</th>
+              <th>Global</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-pending"
+            data-col-global="16"
+            data-col-project="9"
+            data-col-payment-method="8"
+            data-col-vendor-invoice="12"
+            data-col-payee-name="14">
+            <tr data-global="False" data-payment-method="ACH" data-project="Linda Nelson DDS MRA" data-escalation-reason="Outside Payment Terms">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><span class="lock-icon">🔒</span></td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-07-01</td>
+              <td><span class="badge badge-esc-fee">Outside Payment Terms</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>—</td>
+              <td>ACH</td>
+              <td>Linda Nelson DDS MRA</td>
+              <td>2026-08-15</td>
+              <td>$3,500.00</td>
+              <td>30108610032006102026001234</td>
+              <td>MRO</td>
+              <td>Linda Nelson DDS</td>
+              <td>2026-06-10</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+            <tr data-global="True" data-payment-method="Check" data-project="Victoria Bond MRA" data-escalation-reason="Missing W9">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-30</td>
+              <td><span class="badge badge-esc-w9">Missing W9</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>—</td>
+              <td>Check</td>
+              <td>Victoria Bond MRA</td>
+              <td>2026-11-24</td>
+              <td>$1,200.00</td>
+              <td>30108610032006092026002345</td>
+              <td>Verisma</td>
+              <td>Victoria Bond Medical</td>
+              <td>2026-06-09</td>
+              <td><span class="badge badge-true">True</span></td>
+            </tr>
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Highmark MRA" data-escalation-reason="Deadline Restriction">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-30</td>
+              <td><span class="badge badge-esc-cc">Deadline Restriction</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td><span class="badge badge-cc">CC</span></td>
+              <td>Credit Card</td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td>$6,800.00</td>
+              <td>30108610032006082026003456</td>
+              <td>Ciox Health</td>
+              <td>Highmark Health</td>
+              <td>2026-06-08</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+            <tr data-global="False" data-payment-method="ACH" data-project="Amber Vasquez MRA" data-escalation-reason="Outside Payment Terms">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-29</td>
+              <td><span class="badge badge-esc-fee">Outside Payment Terms</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>—</td>
+              <td>ACH</td>
+              <td>Amber Vasquez MRA</td>
+              <td>2026-09-30</td>
+              <td>$890.00</td>
+              <td>30108610032006072026004567</td>
+              <td>IOD Inc</td>
+              <td>Amber Vasquez Clinic</td>
+              <td>2026-06-07</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+            <tr data-global="True" data-payment-method="Check" data-project="James Curry MRA" data-escalation-reason="Missing W9">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>j.smith@datavant.com</td>
+              <td>2026-06-28</td>
+              <td><span class="badge badge-esc-w9">Missing W9</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>—</td>
+              <td>Check</td>
+              <td>James Curry MRA</td>
+              <td>2026-10-15</td>
+              <td>$2,750.00</td>
+              <td>30108610032006062026005678</td>
+              <td>DataFile</td>
+              <td>James Curry MD</td>
+              <td>2026-06-06</td>
+              <td><span class="badge badge-true">True</span></td>
+            </tr>
+            <tr data-global="False" data-payment-method="ACH" data-project="Highmark MRA" data-escalation-reason="Outside Payment Terms">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-27</td>
+              <td><span class="badge badge-esc-fee">Outside Payment Terms</span></td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>—</td>
+              <td>ACH</td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td>$18,400.00</td>
+              <td>30108610032006052026006789</td>
+              <td>MRO</td>
+              <td>Highmark Health</td>
+              <td>2026-06-05</td>
+              <td><span class="badge badge-false">False</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PAGE: COMPLETE
+  ════════════════════════════════════════ -->
+  <div id="page-complete" class="page">
+    <div class="page-inner">
+      <div class="page-title">Complete</div>
+
+      <div class="toolbar">
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-complete-actions">Actions ▾</button>
+          <div id="dd-complete-actions" class="dropdown-menu">
+            <button class="dropdown-item disabled" data-action="record-external-payment" data-page-id="complete">Record External Payment</button>
+          </div>
+        </div>
+
+        <div class="dropdown-wrapper">
+          <button class="btn-secondary" data-dropdown="dd-complete-export">Export ▾</button>
+          <div id="dd-complete-export" class="dropdown-menu">
+            <button class="dropdown-item">CSV</button>
+            <button class="dropdown-item">JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-row" data-filter-table="tbl-complete">
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="global">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Global</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="True"> True</label>
+            <label class="filter-option"><input type="checkbox" value="False"> False</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="project">Project <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="project">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Project</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="payment-method">Payment Method <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="payment-method">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Payment Method</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+            <label class="filter-option"><input type="checkbox" value="ACH"> ACH</label>
+            <label class="filter-option"><input type="checkbox" value="Check"> Check</label>
+            <label class="filter-option"><input type="checkbox" value="Credit Card"> Credit Card</label>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="last-updated-by">Last Updated By <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="last-updated-by">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Last Updated By</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-wrapper">
+          <button class="filter-chip" data-filter-key="status">Status <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="status">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Status</span>
+              <button class="filter-clear-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-row" data-search-table="tbl-complete">
+        <input class="search-input" type="text" placeholder="Search: Vendor Invoice Number, Payee Name...">
+        <button class="btn-clear search-clear-btn">✕</button>
+      </div>
+
+      <div class="showing-row" id="showing-complete">Showing 6 of 6 items</div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="header-cb" data-table="tbl-complete"></th>
+              <th>View</th>
+              <th>Received At</th>
+              <th>Status</th>
+              <th>Invoice Amount</th>
+              <th>Payment Date</th>
+              <th>Payment Method</th>
+              <th>Vendor Invoice Number</th>
+              <th>Coupa Vendor</th>
+              <th>Coupa Invoice ID</th>
+              <th>Payment Number</th>
+              <th>Payment Batch Number</th>
+              <th>Check Number</th>
+              <th>External Transaction ID</th>
+              <th>Payee Name</th>
+              <th>Project</th>
+              <th>Project Due Date</th>
+              <th>Global</th>
+              <th>Last Updated By</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-complete"
+            data-col-global="17"
+            data-col-project="15"
+            data-col-payment-method="6"
+            data-col-last-updated-by="18"
+            data-col-status="3"
+            data-col-vendor-invoice="7"
+            data-col-payee-name="14">
+            <tr data-global="False" data-payment-method="ACH" data-project="Linda Nelson DDS MRA" data-last-updated-by="a.carter@datavant.com" data-status="Paid">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td>2026-06-01</td>
+              <td><span class="badge badge-paid">Paid</span></td>
+              <td>$1,250.00</td>
+              <td>2026-06-20</td>
+              <td>ACH</td>
+              <td>30108610032006012026001111</td>
+              <td>MRO</td>
+              <td>CP-2026-001111</td>
+              <td>PAY-001</td>
+              <td>BATCH-001</td>
+              <td>—</td>
+              <td>EXT-001</td>
+              <td>Linda Nelson DDS</td>
+              <td>Linda Nelson DDS MRA</td>
+              <td>2026-08-15</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-20</td>
+            </tr>
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Highmark MRA" data-last-updated-by="s.bertley@datavant.com" data-status="Sent for Payment">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td>2026-06-03</td>
+              <td><span class="badge badge-sent">Sent for Payment</span></td>
+              <td>$4,500.00</td>
+              <td>—</td>
+              <td>Credit Card</td>
+              <td>30108610032006032026002222</td>
+              <td>Ciox Health</td>
+              <td>CP-2026-002222</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>Highmark Health</td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-28</td>
+            </tr>
+            <tr data-global="True" data-payment-method="Check" data-project="Victoria Bond MRA" data-last-updated-by="a.carter@datavant.com" data-status="Paid">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td>2026-05-28</td>
+              <td><span class="badge badge-paid">Paid</span></td>
+              <td>$875.50</td>
+              <td>2026-06-15</td>
+              <td>Check</td>
+              <td>30108610032005282026003333</td>
+              <td>Verisma</td>
+              <td>CP-2026-003333</td>
+              <td>PAY-002</td>
+              <td>BATCH-001</td>
+              <td>CHK-88421</td>
+              <td>—</td>
+              <td>Victoria Bond Medical</td>
+              <td>Victoria Bond MRA</td>
+              <td>2026-11-24</td>
+              <td><span class="badge badge-true">True</span></td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-15</td>
+            </tr>
+            <tr data-global="False" data-payment-method="ACH" data-project="Amber Vasquez MRA" data-last-updated-by="s.bertley@datavant.com" data-status="Denied">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td>2026-05-25</td>
+              <td><span class="badge badge-denied">Denied</span></td>
+              <td>$340.00</td>
+              <td>—</td>
+              <td>ACH</td>
+              <td>30108610032005252026004444</td>
+              <td>IOD Inc</td>
+              <td>CP-2026-004444</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>Amber Vasquez Clinic</td>
+              <td>Amber Vasquez MRA</td>
+              <td>2026-09-30</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>s.bertley@datavant.com</td>
+              <td>2026-06-10</td>
+            </tr>
+            <tr data-global="True" data-payment-method="ACH" data-project="James Curry MRA" data-last-updated-by="j.smith@datavant.com" data-status="Paid">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td>2026-05-20</td>
+              <td><span class="badge badge-paid">Paid</span></td>
+              <td>$2,100.00</td>
+              <td>2026-06-08</td>
+              <td>ACH</td>
+              <td>30108610032005202026005555</td>
+              <td>DataFile</td>
+              <td>CP-2026-005555</td>
+              <td>PAY-003</td>
+              <td>BATCH-002</td>
+              <td>—</td>
+              <td>EXT-003</td>
+              <td>James Curry MD</td>
+              <td>James Curry MRA</td>
+              <td>2026-10-15</td>
+              <td><span class="badge badge-true">True</span></td>
+              <td>j.smith@datavant.com</td>
+              <td>2026-06-08</td>
+            </tr>
+            <tr data-global="False" data-payment-method="Credit Card" data-project="Highmark MRA" data-last-updated-by="a.carter@datavant.com" data-status="Sent for Payment">
+              <td><input type="checkbox"></td>
+              <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+              <td>2026-05-15</td>
+              <td><span class="badge badge-sent">Sent for Payment</span></td>
+              <td>$6,800.00</td>
+              <td>—</td>
+              <td>Credit Card</td>
+              <td>30108610032005152026006666</td>
+              <td>Ciox Health</td>
+              <td>CP-2026-006666</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>Highmark Health</td>
+              <td>Highmark MRA</td>
+              <td>2026-12-01</td>
+              <td><span class="badge badge-false">False</span></td>
+              <td>a.carter@datavant.com</td>
+              <td>2026-06-30</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PLACEHOLDER PAGES
+  ════════════════════════════════════════ -->
+  <div id="page-all-invoices" class="page">
+    <div class="page-inner">
+      <div class="page-title">All Invoices</div>
+      <div class="placeholder-body">
+        <h2>All Invoices</h2>
+        <p>This page is unchanged from the current HubPay application.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-line-items" class="page">
+    <div class="page-inner">
+      <div class="page-title">Invoice Line Items</div>
+      <div class="placeholder-body">
+        <h2>Invoice Line Items</h2>
+        <p>This page is unchanged from the current HubPay application.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-record-search" class="page">
+    <div class="page-inner">
+      <div class="page-title">Record Search</div>
+      <div class="placeholder-body">
+        <h2>Record Search</h2>
+        <p>This page is unchanged from the current HubPay application.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-upload-history" class="page">
+    <div class="page-inner">
+      <div class="page-title">Upload History</div>
+      <div class="placeholder-body">
+        <h2>Upload History</h2>
+        <p>This page is unchanged from the current HubPay application.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-locks" class="page">
+    <div class="page-inner">
+      <div class="page-title">Invoice Locks</div>
+      <div class="placeholder-body">
+        <h2>Invoice Locks</h2>
+        <p>This page is unchanged from the current HubPay application.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #main -->
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Confirm</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="modal-cancel">Cancel</button>
+      <button class="btn-modal-confirm" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// UTILITY
+// ═══════════════════════════════════════════════════════════
+
+function protoAlert() {
+  alert('Action not available in prototype');
+}
+
+// ── TOAST ──
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { toast.classList.add('show'); });
+  });
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ── MODAL ──
+let modalResolve = null;
+
+function showModal(title, body) {
+  return new Promise(resolve => {
+    modalResolve = resolve;
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent = body;
+    document.getElementById('modal-overlay').classList.add('open');
+  });
+}
+
+function closeModal(result) {
+  document.getElementById('modal-overlay').classList.remove('open');
+  if (modalResolve) { modalResolve(result); modalResolve = null; }
+}
+
+document.getElementById('modal-confirm').addEventListener('click', () => closeModal(true));
+document.getElementById('modal-cancel').addEventListener('click', () => closeModal(false));
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modal-overlay').classList.contains('open')) closeModal(false);
+});
+
+// ═══════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════
+
+const navItems = document.querySelectorAll('.nav-item');
+const pages    = document.querySelectorAll('.page');
+
+navItems.forEach(btn => {
+  btn.addEventListener('click', () => {
+    navItems.forEach(n => n.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.getAttribute('data-page');
+    pages.forEach(p => p.classList.toggle('active', p.id === target));
+    closeAllDropdowns();
+    closeAllFilterDropdowns();
+  });
+});
+
+document.getElementById('nav-logout').addEventListener('click', () => {
+  alert('Action not available in prototype');
+});
+
+// ═══════════════════════════════════════════════════════════
+// ACTION DROPDOWNS (open/close)
+// ═══════════════════════════════════════════════════════════
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+}
+
+document.querySelectorAll('[data-dropdown]').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const id = btn.getAttribute('data-dropdown');
+    const menu = document.getElementById(id);
+    const wasOpen = menu.classList.contains('open');
+    closeAllDropdowns();
+    closeAllFilterDropdowns();
+    if (!wasOpen) menu.classList.add('open');
+  });
+});
+
+document.addEventListener('click', () => { closeAllDropdowns(); closeAllFilterDropdowns(); });
+
+document.querySelectorAll('.dropdown-menu').forEach(menu => {
+  menu.addEventListener('click', e => e.stopPropagation());
+});
+
+// ═══════════════════════════════════════════════════════════
+// FILTER DROPDOWNS (multi-select)
+// ═══════════════════════════════════════════════════════════
+
+function closeAllFilterDropdowns() {
+  document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('open'));
+}
+
+// Open/close on chip click
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', e => {
+    e.stopPropagation();
+    const wrapper = chip.closest('.filter-wrapper');
+    const dropdown = wrapper.querySelector('.filter-dropdown');
+    const wasOpen = dropdown.classList.contains('open');
+    closeAllDropdowns();
+    closeAllFilterDropdowns();
+    if (!wasOpen) dropdown.classList.add('open');
+  });
+});
+
+// Prevent filter dropdown clicks from closing it
+document.querySelectorAll('.filter-dropdown').forEach(dd => {
+  dd.addEventListener('click', e => e.stopPropagation());
+});
+
+// Clear button per filter
+document.querySelectorAll('.filter-clear-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const dropdown = btn.closest('.filter-dropdown');
+    dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+    const chip = dropdown.closest('.filter-wrapper').querySelector('.filter-chip');
+    chip.classList.remove('active');
+    applyFiltersForDropdown(dropdown);
+  });
+});
+
+// Checkbox change → apply filters + update chip active state
+document.querySelectorAll('.filter-dropdown input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const dropdown = cb.closest('.filter-dropdown');
+    const chip = dropdown.closest('.filter-wrapper').querySelector('.filter-chip');
+    const anyChecked = [...dropdown.querySelectorAll('input[type="checkbox"]')].some(c => c.checked);
+    chip.classList.toggle('active', anyChecked);
+    applyFiltersForDropdown(dropdown);
+  });
+});
+
+// Collect active filter selections for a given filters-row
+function getActiveFilters(filtersRow) {
+  const filters = {};
+  filtersRow.querySelectorAll('.filter-wrapper').forEach(wrapper => {
+    const dropdown = wrapper.querySelector('.filter-dropdown');
+    const key = dropdown.getAttribute('data-filter-key');
+    const checked = [...dropdown.querySelectorAll('input[type="checkbox"]:checked')].map(c => c.value);
+    if (checked.length > 0) filters[key] = checked;
+  });
+  return filters;
+}
+
+// Map filter key to data attribute on <tr>
+const filterKeyToDataAttr = {
+  'global': 'global',
+  'project': 'project',
+  'payment-method': 'paymentMethod',
+  'created-by': 'createdBy',
+  'last-updated-by': 'lastUpdatedBy',
+  'reason-for-review': 'reasonForReview',
+  'escalation-reason': 'escalationReason',
+  'status': 'status',
+};
+
+function applyFiltersForDropdown(dropdown) {
+  const filtersRow = dropdown.closest('.filters-row');
+  if (!filtersRow) return;
+  const tableId = filtersRow.getAttribute('data-filter-table');
+  if (!tableId) return;
+  applyAllFilters(tableId, filtersRow);
+}
+
+function applyAllFilters(tableId, filtersRow) {
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return;
+  const activeFilters = getActiveFilters(filtersRow);
+
+  // Also get search term for this table
+  const pageEl = tbody.closest('.page');
+  const searchRow = pageEl ? pageEl.querySelector('.search-row') : null;
+  const searchTerm = searchRow ? searchRow.querySelector('.search-input').value.toLowerCase().trim() : '';
+
+  let visible = 0;
+  tbody.querySelectorAll('tr').forEach(row => {
+    let show = true;
+
+    // Apply each filter (AND logic)
+    for (const [key, values] of Object.entries(activeFilters)) {
+      const attr = filterKeyToDataAttr[key];
+      if (!attr) continue;
+      const rowVal = row.dataset[attr] || '';
+      if (!values.includes(rowVal)) { show = false; break; }
+    }
+
+    // Apply search
+    if (show && searchTerm) {
+      const vendorInvoiceCol = parseInt(tbody.getAttribute('data-col-vendor-invoice') || '0');
+      const payeeNameCol = parseInt(tbody.getAttribute('data-col-payee-name') || '0');
+      const cells = row.querySelectorAll('td');
+      const invoiceText = cells[vendorInvoiceCol] ? cells[vendorInvoiceCol].textContent.toLowerCase() : '';
+      const payeeText = cells[payeeNameCol] ? cells[payeeNameCol].textContent.toLowerCase() : '';
+      if (!invoiceText.includes(searchTerm) && !payeeText.includes(searchTerm)) show = false;
+    }
+
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  // Update showing count
+  updateShowingCount(tableId, visible);
+}
+
+function updateShowingCount(tableId, visible) {
+  const suffixMap = { 'tbl-new': 'new', 'tbl-action': 'action', 'tbl-review': 'review', 'tbl-pending': 'pending', 'tbl-complete': 'complete' };
+  const suffix = suffixMap[tableId];
+  if (!suffix) return;
+  const el = document.getElementById('showing-' + suffix);
+  if (el) {
+    const tbody = document.getElementById(tableId);
+    const total = tbody.querySelectorAll('tr').length;
+    el.textContent = `Showing ${visible} of ${total} items`;
+  }
+}
+
+// Populate dynamic filter options (Project, Created By, Last Updated By, Status)
+// called after page load and after rows change
+function populateDynamicFilters(tableId) {
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return;
+  const pageEl = tbody.closest('.page');
+  const filtersRow = pageEl ? pageEl.querySelector('.filters-row') : null;
+  if (!filtersRow) return;
+
+  const dynamicKeys = ['project', 'created-by', 'last-updated-by', 'status'];
+  dynamicKeys.forEach(key => {
+    const attrName = filterKeyToDataAttr[key];
+    if (!attrName) return;
+    const dropdown = filtersRow.querySelector(`.filter-dropdown[data-filter-key="${key}"]`);
+    if (!dropdown) return;
+
+    // Collect unique values from all rows (including hidden ones)
+    const values = new Set();
+    tbody.querySelectorAll('tr').forEach(row => {
+      const v = row.dataset[attrName];
+      if (v) values.add(v);
+    });
+
+    // Get currently checked values
+    const checked = new Set([...dropdown.querySelectorAll('input[type="checkbox"]:checked')].map(c => c.value));
+
+    // Remove old dynamic options (keep header)
+    dropdown.querySelectorAll('.filter-option').forEach(o => o.remove());
+
+    // Re-add sorted
+    [...values].sort().forEach(val => {
+      const label = document.createElement('label');
+      label.className = 'filter-option';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = val;
+      if (checked.has(val)) cb.checked = true;
+      cb.addEventListener('change', () => {
+        const anyChecked = [...dropdown.querySelectorAll('input[type="checkbox"]')].some(c => c.checked);
+        const chip = dropdown.closest('.filter-wrapper').querySelector('.filter-chip');
+        chip.classList.toggle('active', anyChecked);
+        applyFiltersForDropdown(dropdown);
+      });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + val));
+      dropdown.appendChild(label);
+    });
+  });
+}
+
+// Init dynamic filters for all tables
+['tbl-new', 'tbl-action', 'tbl-review', 'tbl-pending', 'tbl-complete'].forEach(id => {
+  populateDynamicFilters(id);
+  updateShowingCount(id, document.getElementById(id) ? document.getElementById(id).querySelectorAll('tr').length : 0);
+});
+
+// ═══════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════
+
+document.querySelectorAll('.search-row').forEach(row => {
+  const input = row.querySelector('.search-input');
+  const clearBtn = row.querySelector('.search-clear-btn');
+  const tableId = row.getAttribute('data-search-table');
+
+  input.addEventListener('input', () => {
+    const pageEl = row.closest('.page');
+    const filtersRow = pageEl ? pageEl.querySelector('.filters-row') : null;
+    applyAllFilters(tableId, filtersRow);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    const pageEl = row.closest('.page');
+    const filtersRow = pageEl ? pageEl.querySelector('.filters-row') : null;
+    applyAllFilters(tableId, filtersRow);
+    input.focus();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// HEADER CHECKBOXES
+// ═══════════════════════════════════════════════════════════
+
+document.querySelectorAll('.header-cb').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const tableId = cb.getAttribute('data-table');
+    const tbody = document.getElementById(tableId);
+    tbody.querySelectorAll('tr').forEach(row => {
+      if (row.style.display !== 'none') {
+        const rowCb = row.querySelector('input[type="checkbox"]');
+        if (rowCb) rowCb.checked = cb.checked;
+      }
+    });
+    updateActionsMenuForTable(tableId);
+  });
+});
+
+// When any row checkbox changes, update actions menu
+document.querySelectorAll('tbody').forEach(tbody => {
+  tbody.addEventListener('change', e => {
+    if (e.target.type === 'checkbox') {
+      updateActionsMenuForTable(tbody.id);
+      // Sync header checkbox
+      const tableEl = tbody.closest('table');
+      const headerCb = tableEl ? tableEl.querySelector('.header-cb') : null;
+      if (headerCb) {
+        const all = [...tbody.querySelectorAll('tr')].filter(r => r.style.display !== 'none');
+        const checked = all.filter(r => r.querySelector('input[type="checkbox"]')?.checked);
+        headerCb.indeterminate = checked.length > 0 && checked.length < all.length;
+        headerCb.checked = all.length > 0 && checked.length === all.length;
+      }
+    }
+  });
+});
+
+function getSelectedRows(tableId) {
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return [];
+  return [...tbody.querySelectorAll('tr')].filter(row =>
+    row.style.display !== 'none' && row.querySelector('input[type="checkbox"]')?.checked
+  );
+}
+
+function updateActionsMenuForTable(tableId) {
+  const selected = getSelectedRows(tableId);
+  const hasSelection = selected.length > 0;
+
+  // Map tableId to page id suffix
+  const pageMap = { 'tbl-new': 'new', 'tbl-action': 'action', 'tbl-review': 'review', 'tbl-complete': 'complete' };
+  const suffix = pageMap[tableId];
+  if (!suffix) return;
+
+  const ddId = `dd-${suffix}-actions`;
+  const menu = document.getElementById(ddId);
+  if (!menu) return;
+
+  menu.querySelectorAll('.dropdown-item[data-action]').forEach(item => {
+    item.classList.toggle('disabled', !hasSelection);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// REVIEW PAGE: build new row HTML
+// ═══════════════════════════════════════════════════════════
+
+function reasonBadge(reason) {
+  if (reason === 'Credit Card Payment') return `<span class="badge badge-reason-cc">Credit Card Payment</span>`;
+  if (reason === 'At-Loss Review') return `<span class="badge badge-reason-atloss">At-Loss Review</span>`;
+  return `<span class="badge badge-reason-research">Research</span>`;
+}
+
+function globalBadge(val) {
+  return val === 'True'
+    ? `<span class="badge badge-true">True</span>`
+    : `<span class="badge badge-false">False</span>`;
+}
+
+function determineReason(row) {
+  const pm = row.dataset.paymentMethod;
+  const ccEmail = row.dataset.ccEmail;
+  const global = row.dataset.global;
+
+  if (pm === 'Credit Card') return 'Credit Card Payment';
+  if (global === 'True') return 'At-Loss Review';
+  return 'Research';
+}
+
+function buildReviewRow(sourceRow) {
+  const pm = sourceRow.dataset.paymentMethod;
+  const global = sourceRow.dataset.global;
+  const project = sourceRow.dataset.project;
+  const ccEmail = sourceRow.dataset.ccEmail;
+  const reason = determineReason(sourceRow);
+
+  // Extract cell values from source row (vary by source table)
+  const cells = sourceRow.querySelectorAll('td');
+  const tbody = sourceRow.closest('tbody');
+  const vendorInvoiceColIdx = parseInt(tbody.getAttribute('data-col-vendor-invoice') || '0');
+  const payeeNameColIdx = parseInt(tbody.getAttribute('data-col-payee-name') || '0');
+  const vendorInvoice = cells[vendorInvoiceColIdx] ? cells[vendorInvoiceColIdx].textContent.trim() : '—';
+  const payeeName = cells[payeeNameColIdx] ? cells[payeeNameColIdx].textContent.trim() : '—';
+
+  // Get other values we can find
+  const projectColIdx = parseInt(tbody.getAttribute('data-col-project') || '0');
+  const pmColIdx = parseInt(tbody.getAttribute('data-col-payment-method') || '0');
+
+  // Build a new <tr> for the review table
+  const tr = document.createElement('tr');
+  tr.dataset.global = global;
+  tr.dataset.paymentMethod = pm;
+  tr.dataset.project = project;
+  tr.dataset.lastUpdatedBy = 'g.harrison@datavant.com';
+  tr.dataset.reasonForReview = reason;
+  tr.dataset.ccEmail = ccEmail;
+
+  const ccBadge = ccEmail === 'true' ? `<span class="badge badge-cc">CC</span>` : '—';
+
+  tr.innerHTML = `
+    <td><input type="checkbox"></td>
+    <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+    <td><button class="icon-btn" onclick="protoAlert()">✏️</button></td>
+    <td>g.harrison@datavant.com</td>
+    <td>${new Date().toISOString().slice(0,10)}</td>
+    <td>${reasonBadge(reason)}</td>
+    <td><span class="badge badge-action">Action Needed</span></td>
+    <td>${project}</td>
+    <td>—</td>
+    <td>${globalBadge(global)}</td>
+    <td>${pm}</td>
+    <td>${ccBadge}</td>
+    <td>${vendorInvoice}</td>
+    <td>—</td>
+    <td>${payeeName}</td>
+    <td>—</td>
+    <td>${new Date().toISOString().slice(0,10)}</td>
+    <td>—</td>
+  `;
+
+  // Wire up row checkbox change
+  tr.querySelector('input[type="checkbox"]').addEventListener('change', () => {
+    updateActionsMenuForTable('tbl-review');
+    syncHeaderCb('tbl-review');
+  });
+
+  return tr;
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPLETE PAGE: build new row HTML
+// ═══════════════════════════════════════════════════════════
+
+function buildCompleteRow(sourceRow) {
+  const pm = sourceRow.dataset.paymentMethod;
+  const global = sourceRow.dataset.global;
+  const project = sourceRow.dataset.project;
+
+  const tbody = sourceRow.closest('tbody');
+  const cells = sourceRow.querySelectorAll('td');
+  const vendorInvoiceColIdx = parseInt(tbody.getAttribute('data-col-vendor-invoice') || '0');
+  const payeeNameColIdx = parseInt(tbody.getAttribute('data-col-payee-name') || '0');
+  const vendorInvoice = cells[vendorInvoiceColIdx] ? cells[vendorInvoiceColIdx].textContent.trim() : '—';
+  const payeeName = cells[payeeNameColIdx] ? cells[payeeNameColIdx].textContent.trim() : '—';
+
+  const tr = document.createElement('tr');
+  tr.dataset.global = global;
+  tr.dataset.paymentMethod = pm;
+  tr.dataset.project = project;
+  tr.dataset.lastUpdatedBy = 'g.harrison@datavant.com';
+  tr.dataset.status = 'Sent for Payment';
+
+  tr.innerHTML = `
+    <td><input type="checkbox"></td>
+    <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
+    <td>${new Date().toISOString().slice(0,10)}</td>
+    <td><span class="badge badge-sent">Sent for Payment</span></td>
+    <td>—</td>
+    <td>—</td>
+    <td>${pm}</td>
+    <td>${vendorInvoice}</td>
+    <td>—</td>
+    <td>—</td>
+    <td>—</td>
+    <td>—</td>
+    <td>—</td>
+    <td>—</td>
+    <td>${payeeName}</td>
+    <td>${project}</td>
+    <td>—</td>
+    <td>${globalBadge(global)}</td>
+    <td>g.harrison@datavant.com</td>
+    <td>${new Date().toISOString().slice(0,10)}</td>
+  `;
+
+  tr.querySelector('input[type="checkbox"]').addEventListener('change', () => {
+    updateActionsMenuForTable('tbl-complete');
+    syncHeaderCb('tbl-complete');
+  });
+
+  return tr;
+}
+
+function syncHeaderCb(tableId) {
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return;
+  const tableEl = tbody.closest('table');
+  const headerCb = tableEl ? tableEl.querySelector('.header-cb') : null;
+  if (!headerCb) return;
+  const all = [...tbody.querySelectorAll('tr')].filter(r => r.style.display !== 'none');
+  const checked = all.filter(r => r.querySelector('input[type="checkbox"]')?.checked);
+  headerCb.indeterminate = checked.length > 0 && checked.length < all.length;
+  headerCb.checked = all.length > 0 && checked.length === all.length;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS: Send for Payment
+// ═══════════════════════════════════════════════════════════
+
+async function handleSendForPayment(sourceTableId) {
+  const selected = getSelectedRows(sourceTableId);
+  if (selected.length === 0) return;
+
+  // Split into CC (route to Review) and non-CC (route to Complete)
+  const ccRows = selected.filter(r => r.dataset.paymentMethod === 'Credit Card' && r.dataset.ccEmail === 'true');
+  const payRows = selected.filter(r => !(r.dataset.paymentMethod === 'Credit Card' && r.dataset.ccEmail === 'true'));
+
+  // If all are CC, just confirm and route all to Review
+  // If mixed or all non-CC, confirm for the payRows portion, CC rows silently go to Review
+
+  const totalPay = payRows.length;
+  const totalCC = ccRows.length;
+
+  if (totalPay === 0 && totalCC > 0) {
+    // All CC
+    const confirmed = await showModal(
+      'Route to Review',
+      `${totalCC} Credit Card invoice(s) will be routed to Review for CC processing. Continue?`
+    );
+    if (!confirmed) return;
+    moveRowsToReview(ccRows, sourceTableId);
+    showToast(`${totalCC} invoice(s) routed to Review`);
+    return;
+  }
+
+  if (totalCC === 0 && totalPay > 0) {
+    // All non-CC
+    const confirmed = await showModal(
+      'Send for Payment',
+      `Send ${totalPay} invoice(s) for payment?`
+    );
+    if (!confirmed) return;
+    moveRowsToComplete(payRows, sourceTableId);
+    showToast(`${totalPay} invoice(s) sent for payment`);
+    return;
+  }
+
+  // Mixed
+  const confirmed = await showModal(
+    'Send for Payment',
+    `${totalPay} invoice(s) will be sent for payment. ${totalCC} Credit Card invoice(s) will be routed to Review. Continue?`
+  );
+  if (!confirmed) return;
+  if (payRows.length > 0) moveRowsToComplete(payRows, sourceTableId);
+  if (ccRows.length > 0) moveRowsToReview(ccRows, sourceTableId);
+  showToast(`${totalPay + totalCC} invoice(s) processed`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS: Send to Supervisor
+// ═══════════════════════════════════════════════════════════
+
+async function handleSendToSupervisor(sourceTableId) {
+  const selected = getSelectedRows(sourceTableId);
+  if (selected.length === 0) return;
+
+  const confirmed = await showModal(
+    'Send to Supervisor',
+    `Send ${selected.length} invoice(s) to supervisor?`
+  );
+  if (!confirmed) return;
+  moveRowsToReview(selected, sourceTableId);
+  showToast(`Invoice(s) sent to Review`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS: CC Sent for Payment (Review page only)
+// ═══════════════════════════════════════════════════════════
+
+async function handleCCSentForPayment() {
+  const selected = getSelectedRows('tbl-review');
+  if (selected.length === 0) return;
+
+  const nonCC = selected.filter(r => r.dataset.paymentMethod !== 'Credit Card');
+  if (nonCC.length > 0) {
+    showToast('CC Sent for Payment is only available for Credit Card invoices', 'error');
+    return;
+  }
+
+  const confirmed = await showModal(
+    'CC Sent for Payment',
+    `Mark ${selected.length} Credit Card invoice(s) as sent for payment?`
+  );
+  if (!confirmed) return;
+  moveRowsToComplete(selected, 'tbl-review');
+  showToast(`${selected.length} CC invoice(s) sent for payment`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOVE HELPERS
+// ═══════════════════════════════════════════════════════════
+
+function moveRowsToReview(rows, sourceTableId) {
+  const reviewTbody = document.getElementById('tbl-review');
+  rows.forEach(row => {
+    const newRow = buildReviewRow(row);
+    row.remove();
+    reviewTbody.appendChild(newRow);
+  });
+  afterRowMutation(sourceTableId);
+  afterRowMutation('tbl-review');
+}
+
+function moveRowsToComplete(rows, sourceTableId) {
+  const completeTbody = document.getElementById('tbl-complete');
+  rows.forEach(row => {
+    const newRow = buildCompleteRow(row);
+    completeTbody.appendChild(newRow);
+    row.remove();
+  });
+  afterRowMutation(sourceTableId);
+  afterRowMutation('tbl-complete');
+}
+
+function afterRowMutation(tableId) {
+  // Uncheck header cb
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return;
+  const tableEl = tbody.closest('table');
+  if (tableEl) {
+    const headerCb = tableEl.querySelector('.header-cb');
+    if (headerCb) { headerCb.checked = false; headerCb.indeterminate = false; }
+  }
+  updateActionsMenuForTable(tableId);
+  populateDynamicFilters(tableId);
+
+  // Recount showing (all rows visible after mutation)
+  const total = tbody.querySelectorAll('tr').length;
+  updateShowingCount(tableId, total);
+
+  // Re-apply filters/search for destination tables that have active filters
+  const pageEl = tbody.closest('.page');
+  const filtersRow = pageEl ? pageEl.querySelector('.filters-row') : null;
+  if (filtersRow) applyAllFilters(tableId, filtersRow);
+}
+
+// ═══════════════════════════════════════════════════════════
+// WIRE UP ACTION MENU ITEMS
+// ═══════════════════════════════════════════════════════════
+
+document.querySelectorAll('.dropdown-item[data-action]').forEach(item => {
+  item.addEventListener('click', async () => {
+    if (item.classList.contains('disabled')) return;
+    const action = item.getAttribute('data-action');
+    const pageId = item.getAttribute('data-page-id');
+    closeAllDropdowns();
+
+    const tableMap = { new: 'tbl-new', action: 'tbl-action', review: 'tbl-review', complete: 'tbl-complete' };
+    const tableId = tableMap[pageId];
+
+    if (action === 'send-for-payment') {
+      await handleSendForPayment(tableId);
+    } else if (action === 'send-to-supervisor') {
+      await handleSendToSupervisor(tableId);
+    } else if (action === 'cc-sent-for-payment') {
+      await handleCCSentForPayment();
+    } else {
+      protoAlert();
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// INIT showing counts
+// ═══════════════════════════════════════════════════════════
+['tbl-new', 'tbl-action', 'tbl-review', 'tbl-pending', 'tbl-complete'].forEach(id => {
+  const tbody = document.getElementById(id);
+  if (tbody) updateShowingCount(id, tbody.querySelectorAll('tr').length);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPT Fee Schedule — Prototype</title>
+<style>
+  :root {
+    --ink: #1a1d23;
+    --sub: #5b6270;
+    --line: #dfe3e8;
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --accent: #2f5fd8;
+    --accent-dark: #1f45a8;
+    --danger: #c53030;
+    --good: #1c7c3f;
+    --warn-bg: #fff8e6;
+    --warn-border: #f0c674;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 20px 60px; }
+  header.top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 4px; flex-wrap: wrap; gap: 8px;
+  }
+  header.top h1 { font-size: 19px; margin: 0; }
+  .order-tag { font-size: 12px; color: var(--sub); }
+  .proto-badge {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .03em;
+    color: var(--accent-dark); background: #e8edfb; border: 1px solid #c7d3f5;
+    padding: 2px 8px; border-radius: 100px; text-transform: uppercase;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px; margin-top: 16px;
+  }
+  .no-ppt-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    background: #fafbfc; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px;
+  }
+  .no-ppt-row label { font-size: 14px; font-weight: 500; cursor: pointer; }
+  table.rows { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.rows th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--sub); font-weight: 600; padding: 0 6px 6px; border-bottom: 1px solid var(--line);
+  }
+  table.rows td { padding: 6px 6px; vertical-align: top; border-bottom: 1px solid #eef0f3; }
+  table.rows select, table.rows input {
+    width: 100%; padding: 6px 7px; font-size: 13px; border: 1px solid #c7cdd6; border-radius: 6px;
+    background: #fff; color: var(--ink); min-width: 90px;
+  }
+  table.rows input[type="number"] { min-width: 80px; }
+  table.rows select:focus, table.rows input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .cell-empty { color: #b7bcc4; font-size: 12px; padding-top: 8px; }
+  .rm-btn {
+    background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;
+    padding: 4px 6px; border-radius: 6px; line-height: 1;
+  }
+  .rm-btn:hover { background: #fbe4e4; }
+  .rm-btn:disabled { color: #c9ccd1; cursor: not-allowed; background: none; }
+  .add-row-btn {
+    margin-top: 10px; background: #fff; border: 1px dashed #9fb0e0; color: var(--accent-dark);
+    font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 7px; cursor: pointer;
+  }
+  .add-row-btn:hover { background: #f0f4fd; }
+  .field-error { color: var(--danger); font-size: 11px; margin-top: 2px; display: block; }
+  .err select, .err input { border-color: var(--danger) !important; }
+
+  .preview-box {
+    margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  }
+  .preview-box .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .03em; font-weight: 600;
+    color: var(--sub); background: #f0f2f5; padding: 7px 12px; border-bottom: 1px solid var(--line);
+  }
+  .preview-box .text {
+    padding: 12px 14px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+    background: #fbfcfd; word-break: break-word; min-height: 20px;
+  }
+  .preview-box .text.empty-warn { color: var(--warn-border); }
+
+  .actions-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  button.primary {
+    background: var(--accent); color: #fff; border: none; padding: 10px 20px; font-size: 14px;
+    font-weight: 600; border-radius: 7px; cursor: pointer;
+  }
+  button.primary:hover { background: var(--accent-dark); }
+  button.secondary {
+    background: #fff; color: var(--ink); border: 1px solid #c7cdd6; padding: 10px 18px; font-size: 14px;
+    font-weight: 600; border-radius: 7px; cursor: pointer;
+  }
+  button.secondary:hover { background: #f0f2f5; }
+  button.ghost {
+    background: none; color: var(--sub); border: none; padding: 10px 12px; font-size: 14px;
+    cursor: pointer; text-decoration: underline;
+  }
+
+  .review-row { display: flex; padding: 8px 0; border-bottom: 1px solid #eef0f3; font-size: 13px; gap: 14px; flex-wrap: wrap; }
+  .review-row .idx { color: var(--sub); width: 20px; flex-shrink: 0; }
+  .review-row .chip { background: #eef1f6; border-radius: 5px; padding: 2px 7px; font-size: 12px; }
+
+  .help-box {
+    background: #f0f4fd; border: 1px solid #c7d3f5; border-radius: 8px; padding: 16px 18px; font-size: 14px;
+  }
+  .help-box code { background: #e2e8fa; padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+
+  .confirm-box { text-align: center; padding: 40px 20px; }
+  .confirm-box .check {
+    width: 52px; height: 52px; border-radius: 50%; background: #e4f5ea; color: var(--good);
+    display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 14px;
+  }
+
+  .assumptions {
+    margin-top: 22px; font-size: 12px; color: var(--sub); border-top: 1px solid var(--line); padding-top: 14px;
+  }
+  .assumptions summary { cursor: pointer; font-weight: 600; color: var(--sub); }
+  .assumptions ul { margin: 8px 0 0; padding-left: 18px; }
+  .assumptions li { margin-bottom: 4px; }
+
+  .step-indicator { display: flex; gap: 6px; font-size: 12px; color: var(--sub); margin-top: 6px; }
+  .step-indicator span.on { color: var(--accent-dark); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------------------------------------------------------------------
+   State
+--------------------------------------------------------------------- */
+const VENDOR_TYPES = ["Provider/Physician", "Hospital", "General HIH", "HIH Carveout", "Exception"];
+const FEE_TYPES = ["Per Chart", "Per Page", "CNA"];
+
+function paymentTypeOptions(vendorType) {
+  if (vendorType === "HIH Carveout" || vendorType === "Exception") {
+    return ["Pre+Post Pay", "Post Pay Only", "Exclusion"];
+  }
+  return ["Pre+Post Pay", "Post Pay Only"];
+}
+
+let rowSeq = 1;
+function newRow() {
+  return {
+    id: rowSeq++,
+    vendorType: "Provider/Physician",
+    vendorName: "",
+    paymentType: "Pre+Post Pay",
+    feeType: "Per Chart",
+    amount: "",
+    maxAmount: ""
+  };
+}
+
+const state = {
+  screen: "form",       // form | review | help | confirmation
+  noPPT: false,
+  rows: [newRow()],
+  errors: {}            // rowId -> { field: message }
+};
+
+/* ---------------------------------------------------------------------
+   Fee text preview formula
+   (Reverse-engineered from sample outputs — see "Assumptions" panel)
+--------------------------------------------------------------------- */
+function fmtAmount(n) {
+  const num = parseFloat(n);
+  if (isNaN(num)) return "$0";
+  const rounded = Math.round(num * 100) / 100;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return "$" + Math.round(rounded);
+  return "$" + rounded.toFixed(2);
+}
+
+function vendorLabel(row) {
+  switch (row.vendorType) {
+    case "Provider/Physician": return "Prov";
+    case "Hospital": return "Hosp";
+    case "General HIH": return "HIH";
+    case "Exception": return "Exception";
+    case "HIH Carveout": return row.vendorName.trim() || "Unnamed Vendor";
+    default: return row.vendorType;
+  }
+}
+
+function paymentLabel(pt) {
+  if (pt === "Pre+Post Pay") return "Pre+Postpay";
+  if (pt === "Post Pay Only") return "Postpay Only";
+  return pt;
+}
+
+function isCarveoutName(row) { return row.vendorType === "HIH Carveout"; }
+
+function buildFeeText() {
+  if (state.noPPT) return "Approval required for all PPT fees";
+
+  const included = state.rows.filter(r => r.paymentType !== "Exclusion" && (r.amount !== "" || r.feeType));
+  const excluded = state.rows.filter(r => r.paymentType === "Exclusion");
+
+  // Step A: group rows by vendor identity (vendorType+vendorName+paymentType), collect fees
+  const vendorMap = new Map();
+  included.forEach(r => {
+    if (r.amount === "" || r.amount === null) return; // no amount entered yet, skip from preview
+    const key = r.vendorType + "|" + (isCarveoutName(r) ? r.vendorName.trim() : "") + "|" + r.paymentType;
+    if (!vendorMap.has(key)) {
+      vendorMap.set(key, { vendorType: r.vendorType, vendorName: r.vendorName, paymentType: r.paymentType, fees: {} });
+    }
+    const entry = vendorMap.get(key);
+    let feeStr = fmtAmount(r.amount);
+    if (r.feeType === "Per Page" && r.maxAmount !== "" && r.maxAmount !== null) {
+      feeStr += ` (max ${fmtAmount(r.maxAmount)})`;
+    }
+    entry.fees[r.feeType] = feeStr;
+  });
+
+  const FEE_ORDER = ["Per Chart", "Per Page", "CNA"];
+  const vendorGroups = Array.from(vendorMap.values()).map(v => {
+    const parts = [];
+    FEE_ORDER.forEach(ft => {
+      if (v.fees[ft] === undefined) return;
+      parts.push(ft === "CNA" ? `CNA ${v.fees[ft]}` : v.fees[ft]);
+    });
+    return { vendorType: v.vendorType, vendorName: v.vendorName, paymentType: v.paymentType, feesString: parts.join(", ") };
+  });
+
+  // Step C: merge vendor groups that share identical (paymentType, feesString)
+  const mergeMap = new Map();
+  const mergeOrder = [];
+  vendorGroups.forEach(g => {
+    const key = g.paymentType + "||" + g.feesString;
+    if (!mergeMap.has(key)) {
+      mergeMap.set(key, { paymentType: g.paymentType, feesString: g.feesString, labels: [] });
+      mergeOrder.push(key);
+    }
+    mergeMap.get(key).labels.push({ text: vendorLabel(g), isCarveout: g.vendorType === "HIH Carveout" });
+  });
+
+  const mergedGroups = mergeOrder.map(k => {
+    const g = mergeMap.get(k);
+    let combined = "";
+    g.labels.forEach((lbl, i) => {
+      if (i === 0) { combined = lbl.text; return; }
+      const prev = g.labels[i - 1];
+      combined += (prev.isCarveout && lbl.isCarveout) ? ", " + lbl.text : "+" + lbl.text;
+    });
+    return { paymentType: g.paymentType, feesString: g.feesString, vendorLabel: combined };
+  });
+
+  // Step D: factor out payment type prefix if 2+ groups share the same one
+  let nonExclusionSegments = [];
+  const uniquePaymentTypes = new Set(mergedGroups.map(g => g.paymentType));
+  if (mergedGroups.length >= 2 && uniquePaymentTypes.size === 1) {
+    const label = paymentLabel(mergedGroups[0].paymentType);
+    const groupStrs = mergedGroups.map(g => `${g.vendorLabel} ${g.feesString}`.trim());
+    nonExclusionSegments.push([label, ...groupStrs].join(" | "));
+  } else {
+    mergedGroups.forEach(g => {
+      nonExclusionSegments.push(`${g.vendorLabel} ${paymentLabel(g.paymentType)} ${g.feesString}`.trim());
+    });
+  }
+
+  // Step E: exclusions
+  const excludedLabels = [];
+  const seenExcl = new Set();
+  excluded.forEach(r => {
+    const lbl = vendorLabel(r);
+    if (!seenExcl.has(lbl)) { seenExcl.add(lbl); excludedLabels.push(lbl); }
+  });
+  const exclusionSegment = excludedLabels.length ? `Not approved for ${excludedLabels.join(", ")}.` : "";
+
+  const all = [...nonExclusionSegments, exclusionSegment].filter(Boolean);
+  return all.join(" | ");
+}
+
+/* ---------------------------------------------------------------------
+   Validation
+--------------------------------------------------------------------- */
+function validateRows() {
+  const errors = {};
+  state.rows.forEach(r => {
+    const rowErrs = {};
+    if (r.vendorType === "HIH Carveout" && !r.vendorName.trim()) {
+      rowErrs.vendorName = "Required";
+    }
+    if (r.paymentType !== "Exclusion" && (r.amount === "" || r.amount === null || isNaN(parseFloat(r.amount)))) {
+      rowErrs.amount = "Required";
+    }
+    if (Object.keys(rowErrs).length) errors[r.id] = rowErrs;
+  });
+  state.errors = errors;
+  return Object.keys(errors).length === 0;
+}
+
+/* ---------------------------------------------------------------------
+   Rendering
+--------------------------------------------------------------------- */
+const app = document.getElementById("app");
+
+function render() {
+  if (state.screen === "form") renderForm();
+  else if (state.screen === "review") renderReview();
+  else if (state.screen === "help") renderHelp();
+  else if (state.screen === "confirmation") renderConfirmation();
+}
+
+function optionsHtml(options, selected) {
+  return options.map(o => `<option value="${o}" ${o === selected ? "selected" : ""}>${o}</option>`).join("");
+}
+
+function renderForm() {
+  const rowsHtml = state.rows.map((r, i) => rowHtml(r, i)).join("");
+
+  app.innerHTML = `
+    <header class="top">
+      <div>
+        <h1>PPT Fee Schedule</h1>
+        <div class="order-tag">Order #DV-10482 · Order Configuration · Switchboard Pipelines</div>
+      </div>
+      <span class="proto-badge">Prototype</span>
+    </header>
+    <div class="step-indicator"><span class="on">1. Build schedule</span> · <span>2. Review</span> · <span>3. Confirm</span></div>
+
+    <div class="card">
+      <div class="no-ppt-row">
+        <input type="checkbox" id="noPPT" ${state.noPPT ? "checked" : ""}>
+        <label for="noPPT">No PPT fee approvals for this Order</label>
+      </div>
+
+      ${state.noPPT ? "" : `
+        <table class="rows">
+          <thead>
+            <tr>
+              <th style="width:26px"></th>
+              <th style="width:15%">Vendor Type</th>
+              <th style="width:15%">Payment Type</th>
+              <th style="width:16%">Vendor Name</th>
+              <th style="width:13%">Fee Type</th>
+              <th style="width:13%">$ Amount</th>
+              <th style="width:13%">Max $ Amount</th>
+            </tr>
+          </thead>
+          <tbody id="rowsBody">
+            ${rowsHtml}
+          </tbody>
+        </table>
+        <button class="add-row-btn" id="addRowBtn" type="button">+ Add row</button>
+      `}
+
+      <div class="preview-box">
+        <div class="label">Fee Text Preview</div>
+        <div class="text ${buildFeeText() ? "" : "empty-warn"}" id="previewText">${escapeHtml(buildFeeText()) || "Enter fee details to preview…"}</div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="primary" id="reviewBtn" type="button">Review</button>
+    </div>
+
+    ${assumptionsHtml()}
+  `;
+
+  attachFormListeners();
+}
+
+function rowHtml(r, i) {
+  const err = state.errors[r.id] || {};
+  const payOptions = paymentTypeOptions(r.vendorType);
+  const showVendorName = r.vendorType === "HIH Carveout";
+  const showAmount = r.paymentType !== "Exclusion";
+  const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
+
+  return `
+    <tr data-row-id="${r.id}">
+      <td>
+        <button class="rm-btn" data-action="remove" data-row-id="${r.id}" ${state.rows.length === 1 ? "disabled" : ""} title="Remove row">✕</button>
+      </td>
+      <td>
+        <select data-field="vendorType" data-row-id="${r.id}">${optionsHtml(VENDOR_TYPES, r.vendorType)}</select>
+      </td>
+      <td>
+        <select data-field="paymentType" data-row-id="${r.id}">${optionsHtml(payOptions, r.paymentType)}</select>
+      </td>
+      <td class="${err.vendorName ? "err" : ""}">
+        ${showVendorName
+          ? `<input type="text" data-field="vendorName" data-row-id="${r.id}" value="${escapeAttr(r.vendorName)}" placeholder="e.g. Healthmark">
+             ${err.vendorName ? `<span class="field-error">${err.vendorName}</span>` : ""}`
+          : `<span class="cell-empty">—</span>`}
+      </td>
+      <td>
+        <select data-field="feeType" data-row-id="${r.id}">${optionsHtml(FEE_TYPES, r.feeType)}</select>
+      </td>
+      <td class="${err.amount ? "err" : ""}">
+        ${showAmount
+          ? `<input type="number" step="0.01" min="0" data-field="amount" data-row-id="${r.id}" value="${escapeAttr(r.amount)}" placeholder="0.00">
+             ${err.amount ? `<span class="field-error">${err.amount}</span>` : ""}`
+          : `<span class="cell-empty">—</span>`}
+      </td>
+      <td>
+        ${showMax
+          ? `<input type="number" step="0.01" min="0" data-field="maxAmount" data-row-id="${r.id}" value="${escapeAttr(r.maxAmount)}" placeholder="0.00">`
+          : `<span class="cell-empty">—</span>`}
+      </td>
+    </tr>
+  `;
+}
+
+function assumptionsHtml() {
+  return `
+    <details class="assumptions">
+      <summary>Prototype notes &amp; assumptions</summary>
+      <ul>
+        <li>Fee Text Preview formula was reverse-engineered from three sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: same-Payment-Type groups factor to one prefix when 2+ groups share it; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; CNA fees are labeled, Per Chart/Per Page fees are bare "$" amounts; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
+        <li>Provider/Physician vs. Hospital mutual-exclusion rule was removed from this prototype per feedback — both may be selected freely.</li>
+        <li>Vendor Name is free text (HIH vendor table doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
+        <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
+      </ul>
+    </details>
+  `;
+}
+
+function attachFormListeners() {
+  document.getElementById("noPPT").addEventListener("change", e => {
+    state.noPPT = e.target.checked;
+    render();
+  });
+
+  const addBtn = document.getElementById("addRowBtn");
+  if (addBtn) addBtn.addEventListener("click", () => {
+    state.rows.push(newRow());
+    render();
+  });
+
+  document.querySelectorAll('[data-action="remove"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.rowId);
+      state.rows = state.rows.filter(r => r.id !== id);
+      delete state.errors[id];
+      render();
+    });
+  });
+
+  document.querySelectorAll("select[data-field]").forEach(sel => {
+    sel.addEventListener("change", () => {
+      const row = state.rows.find(r => r.id === Number(sel.dataset.rowId));
+      const field = sel.dataset.field;
+      row[field] = sel.value;
+      if (field === "vendorType") {
+        const allowed = paymentTypeOptions(row.vendorType);
+        if (!allowed.includes(row.paymentType)) row.paymentType = "Pre+Post Pay";
+        if (row.vendorType !== "HIH Carveout") row.vendorName = "";
+      }
+      if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
+      if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; }
+      render();
+    });
+  });
+
+  document.querySelectorAll("input[data-field]").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const row = state.rows.find(r => r.id === Number(inp.dataset.rowId));
+      row[inp.dataset.field] = inp.value;
+      const previewEl = document.getElementById("previewText");
+      const text = buildFeeText();
+      previewEl.textContent = text || "Enter fee details to preview…";
+      previewEl.classList.toggle("empty-warn", !text);
+    });
+  });
+
+  document.getElementById("reviewBtn").addEventListener("click", () => {
+    if (state.noPPT || validateRows()) {
+      state.screen = "review";
+      render();
+    } else {
+      render();
+    }
+  });
+}
+
+function renderReview() {
+  const rowsSummary = state.noPPT ? "" : state.rows.map((r, i) => `
+    <div class="review-row">
+      <div class="idx">${i + 1}.</div>
+      <div class="chip">${r.vendorType}${r.vendorType === "HIH Carveout" && r.vendorName ? ": " + escapeHtml(r.vendorName) : ""}</div>
+      <div class="chip">${r.paymentType}</div>
+      <div class="chip">${r.feeType}</div>
+      ${r.paymentType !== "Exclusion" ? `<div class="chip">$ ${escapeHtml(r.amount || "0")}</div>` : ""}
+      ${r.feeType === "Per Page" && r.paymentType !== "Exclusion" && r.maxAmount ? `<div class="chip">Max $ ${escapeHtml(r.maxAmount)}</div>` : ""}
+    </div>
+  `).join("");
+
+  app.innerHTML = `
+    <header class="top">
+      <div>
+        <h1>PPT Fee Schedule</h1>
+        <div class="order-tag">Order #DV-10482 · Order Configuration · Switchboard Pipelines</div>
+      </div>
+      <span class="proto-badge">Prototype</span>
+    </header>
+    <div class="step-indicator"><span>1. Build schedule</span> · <span class="on">2. Review</span> · <span>3. Confirm</span></div>
+
+    <div class="card">
+      <h2 style="font-size:15px;margin-top:0;">Review fee schedule</h2>
+      ${state.noPPT
+        ? `<p style="color:var(--sub);font-size:13px;">No PPT fee approvals for this Order.</p>`
+        : `<div>${rowsSummary}</div>`}
+
+      <div class="preview-box">
+        <div class="label">Fee Text Preview (as it will appear downstream)</div>
+        <div class="text">${escapeHtml(buildFeeText())}</div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="ghost" id="helpBtn" type="button">Help</button>
+      <button class="secondary" id="backBtn" type="button">Go Back</button>
+      <button class="primary" id="approveBtn" type="button">Approve</button>
+    </div>
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", () => { state.screen = "form"; render(); });
+  document.getElementById("helpBtn").addEventListener("click", () => { state.screen = "help"; render(); });
+  document.getElementById("approveBtn").addEventListener("click", () => { state.screen = "confirmation"; render(); });
+}
+
+function renderHelp() {
+  app.innerHTML = `
+    <header class="top">
+      <div>
+        <h1>PPT Fee Schedule</h1>
+        <div class="order-tag">Order #DV-10482 · Order Configuration · Switchboard Pipelines</div>
+      </div>
+      <span class="proto-badge">Prototype</span>
+    </header>
+
+    <div class="card">
+      <div class="help-box">
+        <p style="margin-top:0;"><strong>Need help with this fee schedule?</strong></p>
+        <p>Please submit a PPI ticket describing the issue, and post in <code>#support-switchboard-cutover</code> in Slack so the Pipelines team can follow up.</p>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="secondary" id="backToReview" type="button">Back to Review</button>
+    </div>
+  `;
+
+  document.getElementById("backToReview").addEventListener("click", () => { state.screen = "review"; render(); });
+}
+
+function renderConfirmation() {
+  app.innerHTML = `
+    <header class="top">
+      <div>
+        <h1>PPT Fee Schedule</h1>
+        <div class="order-tag">Order #DV-10482 · Order Configuration · Switchboard Pipelines</div>
+      </div>
+      <span class="proto-badge">Prototype</span>
+    </header>
+    <div class="step-indicator"><span>1. Build schedule</span> · <span>2. Review</span> · <span class="on">3. Confirm</span></div>
+
+    <div class="card confirm-box">
+      <div class="check">✓</div>
+      <h2 style="margin:0 0 6px;font-size:17px;">Fee schedule activated</h2>
+      <p style="color:var(--sub);font-size:14px;max-width:480px;margin:0 auto 18px;">
+        This fee schedule is now the active PPT fee schedule for Order #DV-10482. Any previously active schedule for this order has been replaced.
+      </p>
+      <div class="preview-box" style="text-align:left;max-width:600px;margin:0 auto 18px;">
+        <div class="label">Submitted Fee Text</div>
+        <div class="text">${escapeHtml(buildFeeText())}</div>
+      </div>
+      <button class="secondary" id="startOverBtn" type="button">Start a new fee schedule</button>
+    </div>
+  `;
+
+  document.getElementById("startOverBtn").addEventListener("click", () => {
+    state.noPPT = false;
+    state.rows = [newRow()];
+    state.errors = {};
+    state.screen = "form";
+    render();
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Utils
+--------------------------------------------------------------------- */
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function escapeAttr(str) { return escapeHtml(str); }
+
+render();
+</script>
+</body>
+</html>
