@@ -201,6 +201,10 @@ function paymentLabel(pt) {
 
 function isCarveoutName(row) { return hasVendorNameField(row.vendorType); }
 
+function vendorCategory(vendorType) {
+  return (vendorType === "Provider/Physician" || vendorType === "Hospital") ? "provider" : "hih";
+}
+
 function buildFeeText() {
   if (state.noPPT) return "Approval required for all PPT fees";
 
@@ -242,10 +246,10 @@ function buildFeeText() {
       mergeMap.set(key, { paymentType: g.paymentType, feesString: g.feesString, labels: [] });
       mergeOrder.push(key);
     }
-    mergeMap.get(key).labels.push({ text: vendorLabel(g), isCarveout: g.vendorType === "HIH Carveout" });
+    mergeMap.get(key).labels.push({ text: vendorLabel(g), isCarveout: g.vendorType === "HIH Carveout", category: vendorCategory(g.vendorType) });
   });
 
-  const mergedGroups = mergeOrder.map(k => {
+  let mergedGroups = mergeOrder.map(k => {
     const g = mergeMap.get(k);
     let combined = "";
     g.labels.forEach((lbl, i) => {
@@ -253,13 +257,19 @@ function buildFeeText() {
       const prev = g.labels[i - 1];
       combined += (prev.isCarveout && lbl.isCarveout) ? ", " + lbl.text : "+" + lbl.text;
     });
-    return { paymentType: g.paymentType, feesString: g.feesString, vendorLabel: combined };
+    return { paymentType: g.paymentType, feesString: g.feesString, vendorLabel: combined, category: g.labels[0].category };
   });
 
-  // Step D: factor out payment type prefix if 2+ groups share the same one
+  // Order: Provider/Hospital groups first, then General HIH / HIH Carveout / Exception groups
+  const CATEGORY_ORDER = { provider: 0, hih: 1 };
+  mergedGroups = mergedGroups
+    .map((g, i) => ({ ...g, i }))
+    .sort((a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category] || a.i - b.i);
+
+  // Step D: always lead with the payment type when every group shares one
   let nonExclusionSegments = [];
   const uniquePaymentTypes = new Set(mergedGroups.map(g => g.paymentType));
-  if (mergedGroups.length >= 2 && uniquePaymentTypes.size === 1) {
+  if (mergedGroups.length && uniquePaymentTypes.size === 1) {
     const label = paymentLabel(mergedGroups[0].paymentType);
     const groupStrs = mergedGroups.map(g => `${g.vendorLabel} ${g.feesString}`.trim());
     nonExclusionSegments.push([label, ...groupStrs].join(" | "));
