@@ -137,7 +137,8 @@
    State
 --------------------------------------------------------------------- */
 const VENDOR_TYPES = ["Provider/Physician", "Hospital", "General HIH", "HIH Carveout", "Exception"];
-const FEE_TYPES = ["Per Chart", "Per Page", "CNA"];
+const FEE_TYPES = ["Per Chart", "Per Page"];
+const CNA_VENDOR_TYPES = ["Provider/Physician", "Hospital", "General HIH", "HIH Carveout"];
 
 function paymentTypeOptions(vendorType) {
   if (vendorType === "HIH Carveout" || vendorType === "Exception") {
@@ -155,8 +156,13 @@ function newRow() {
     paymentType: "Pre+Post Pay",
     feeType: "Per Chart",
     amount: "",
+    cnaFee: "",
     maxAmount: ""
   };
+}
+
+function hasCnaField(vendorType) {
+  return CNA_VENDOR_TYPES.includes(vendorType);
 }
 
 const state = {
@@ -212,19 +218,29 @@ function buildFeeText() {
   const excluded = state.rows.filter(r => r.paymentType === "Exclusion");
 
   // Step A: group rows by vendor identity (vendorType+vendorName+paymentType), collect fees
+  // Each row can contribute a primary fee (Per Chart/Per Page) and/or a CNA fee.
   const vendorMap = new Map();
   included.forEach(r => {
-    if (r.amount === "" || r.amount === null) return; // no amount entered yet, skip from preview
+    const cnaAmt = hasCnaField(r.vendorType) ? r.cnaFee : "";
+    const hasPrimary = r.amount !== "" && r.amount !== null;
+    const hasCna = cnaAmt !== "" && cnaAmt !== null;
+    if (!hasPrimary && !hasCna) return; // nothing entered yet, skip from preview
+
     const key = r.vendorType + "|" + (isCarveoutName(r) ? r.vendorName.trim() : "") + "|" + r.paymentType;
     if (!vendorMap.has(key)) {
       vendorMap.set(key, { vendorType: r.vendorType, vendorName: r.vendorName, paymentType: r.paymentType, fees: {} });
     }
     const entry = vendorMap.get(key);
-    let feeStr = fmtAmount(r.amount);
-    if (r.feeType === "Per Page" && r.maxAmount !== "" && r.maxAmount !== null) {
-      feeStr += ` (max ${fmtAmount(r.maxAmount)})`;
+    if (hasPrimary) {
+      let feeStr = fmtAmount(r.amount);
+      if (r.feeType === "Per Page" && r.maxAmount !== "" && r.maxAmount !== null) {
+        feeStr += ` (max ${fmtAmount(r.maxAmount)})`;
+      }
+      entry.fees[r.feeType] = feeStr;
     }
-    entry.fees[r.feeType] = feeStr;
+    if (hasCna) {
+      entry.fees.CNA = fmtAmount(cnaAmt);
+    }
   });
 
   const FEE_ORDER = ["Per Chart", "Per Page", "CNA"];
@@ -350,13 +366,14 @@ function renderForm() {
         <table class="rows">
           <thead>
             <tr>
-              <th style="width:26px"></th>
-              <th style="width:15%">Vendor Type</th>
-              <th style="width:15%">Payment Type</th>
-              <th style="width:16%">Vendor Name</th>
-              <th style="width:13%">Fee Type</th>
-              <th style="width:13%">$ Amount</th>
-              <th style="width:13%">Max $ Amount</th>
+              <th style="width:22px"></th>
+              <th style="width:14%">Vendor Type</th>
+              <th style="width:13%">Payment Type</th>
+              <th style="width:14%">Vendor Name</th>
+              <th style="width:11%">Fee Type</th>
+              <th style="width:11%">$ Amount</th>
+              <th style="width:11%">CNA Fee</th>
+              <th style="width:11%">Max $ Amount</th>
             </tr>
           </thead>
           <tbody id="rowsBody">
@@ -388,6 +405,7 @@ function rowHtml(r, i) {
   const showVendorName = hasVendorNameField(r.vendorType);
   const showAmount = r.paymentType !== "Exclusion";
   const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
+  const showCna = hasCnaField(r.vendorType) && r.paymentType !== "Exclusion";
 
   return `
     <tr data-row-id="${r.id}">
@@ -416,6 +434,11 @@ function rowHtml(r, i) {
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
+        ${showCna
+          ? `<input type="number" step="0.01" min="0" data-field="cnaFee" data-row-id="${r.id}" value="${escapeAttr(r.cnaFee)}" placeholder="0.00">`
+          : `<span class="cell-empty">—</span>`}
+      </td>
+      <td>
         ${showMax
           ? `<input type="number" step="0.01" min="0" data-field="maxAmount" data-row-id="${r.id}" value="${escapeAttr(r.maxAmount)}" placeholder="0.00">`
           : `<span class="cell-empty">—</span>`}
@@ -429,7 +452,8 @@ function assumptionsHtml() {
     <details class="assumptions">
       <summary>Prototype notes &amp; assumptions</summary>
       <ul>
-        <li>Fee Text Preview formula was reverse-engineered from three sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: same-Payment-Type groups factor to one prefix when 2+ groups share it; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; CNA fees are labeled, Per Chart/Per Page fees are bare "$" amounts; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
+        <li>Fee Text Preview formula was reverse-engineered from three sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: the schedule's shared Payment Type always leads the string; Provider/Hospital groups are ordered before HIH-related groups; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; CNA fees are labeled, Per Chart/Per Page fees are bare "$" amounts; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
+        <li>CNA Fee is its own column (rather than a Fee Type option) for Provider/Physician, Hospital, General HIH, and HIH Carveout rows when Payment Type isn't Exclusion — a single row now captures both the primary fee and the CNA fee, no duplicate row needed.</li>
         <li>Provider/Physician vs. Hospital mutual-exclusion rule was removed from this prototype per feedback — both may be selected freely.</li>
         <li>Vendor Name is free text (HIH vendor table doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
         <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
@@ -468,9 +492,10 @@ function attachFormListeners() {
         const allowed = paymentTypeOptions(row.vendorType);
         if (!allowed.includes(row.paymentType)) row.paymentType = "Pre+Post Pay";
         if (!hasVendorNameField(row.vendorType)) row.vendorName = "";
+        if (!hasCnaField(row.vendorType)) row.cnaFee = "";
       }
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
-      if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; }
+      if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; row.cnaFee = ""; }
       render();
     });
   });
@@ -504,6 +529,7 @@ function renderReview() {
       <div class="chip">${r.paymentType}</div>
       <div class="chip">${r.feeType}</div>
       ${r.paymentType !== "Exclusion" ? `<div class="chip">$ ${escapeHtml(r.amount || "0")}</div>` : ""}
+      ${hasCnaField(r.vendorType) && r.paymentType !== "Exclusion" && r.cnaFee ? `<div class="chip">CNA $ ${escapeHtml(r.cnaFee)}</div>` : ""}
       ${r.feeType === "Per Page" && r.paymentType !== "Exclusion" && r.maxAmount ? `<div class="chip">Max $ ${escapeHtml(r.maxAmount)}</div>` : ""}
     </div>
   `).join("");
