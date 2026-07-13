@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HubPay — Fee Escalation Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+    color: #1e293b;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: #1a2535;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  #sidebar-header { padding: 20px 16px 8px; }
+  #sidebar-title { color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+  #prototype-badge {
+    display: inline-block; margin-top: 6px; background: #f59e0b; color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .nav-group-label {
+    color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; padding: 16px 16px 4px;
+  }
+  .nav-separator { border: none; border-top: 1px solid #2d3f57; margin: 8px 12px; }
+  .nav-item {
+    display: block; width: 100%; background: none; border: none; border-left: 3px solid transparent;
+    color: #94a3b8; font-size: 13px; text-align: left; padding: 9px 16px; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-item:hover { background: #243044; color: #e2e8f0; }
+  .nav-item.active { background: #243044; color: #fff; border-left-color: #3b82f6; font-weight: 600; }
+  #sidebar-spacer { flex: 1; }
+
+  /* ── MAIN CONTENT ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .page-inner { flex: 1; overflow-y: auto; padding: 24px 28px; max-width: 900px; }
+  .page-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: #64748b; margin-bottom: 18px; }
+
+  .demo-banner {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; color: #1d4ed8; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ── CARD ── */
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .card-header {
+    padding: 12px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header h2 { font-size: 14px; font-weight: 700; color: #0f172a; }
+  .card-body { padding: 18px; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px 24px; margin-bottom: 4px; }
+  .field label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
+  .field .value { font-size: 13px; color: #1e293b; }
+  .field .value.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #475569; }
+
+  /* ── FEE DETAIL STRING ── */
+  .fee-bar { border-top: 1px solid #f1f5f9; margin-top: 16px; padding-top: 14px; }
+  .fee-inline { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .fee-inline:hover .fee-label { color: #1e293b; }
+  .fee-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; transition: color .15s; }
+  .fee-amount { font-size: 13px; font-weight: 600; color: #1d4ed8; }
+  .fee-expand-hint { font-size: 11px; color: #94a3b8; margin-left: auto; }
+  .fee-full-panel { display: none; margin-top: 10px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe; }
+  .fee-full-panel.open { display: block; }
+  .fee-string { font-size: 12px; color: #1d4ed8; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.7; }
+  .fee-caption { font-size: 11px; color: #64748b; margin-top: 6px; }
+  .pipe { color: #93c5fd; margin: 0 4px; }
+
+  .card-actions { padding: 14px 18px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: #3b82f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+  .btn-primary:disabled:hover { background: #cbd5e1; }
+  .btn-secondary {
+    background: #fff; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  }
+  .btn-secondary:hover { background: #f9fafb; }
+  .btn-escalate {
+    background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn-escalate:hover { background: #fde68a; }
+  .btn-add {
+    background: #fff; color: #1d4ed8; border: 1px dashed #93c5fd; font-size: 12px; padding: 7px 14px;
+    border-radius: 6px; cursor: pointer; font-weight: 600;
+  }
+  .btn-add:hover { border-color: #3b82f6; background: #eff6ff; }
+  .btn-rm { background: none; border: none; font-size: 12px; color: #94a3b8; cursor: pointer; padding: 0; }
+  .btn-rm:hover { color: #dc2626; }
+
+  /* ── BADGES ── */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-esc-fee { background: #fef3c7; color: #d97706; }
+  .badge-pass { background: #dcfce7; color: #16a34a; }
+  .badge-override { background: #fef3c7; color: #d97706; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000;
+    align-items: center; justify-content: center; overflow-y: auto; padding: 30px 0;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 10px; padding: 0; max-width: 560px; width: 92%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); max-height: 90vh; display: flex; flex-direction: column; }
+  .modal.modal-sm { max-width: 440px; }
+  .modal-head { padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .modal-body { padding: 20px 24px; overflow-y: auto; }
+  .modal-body p { font-size: 13px; color: #475569; line-height: 1.5; }
+  .modal-actions { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end; }
+
+  .fee-ref {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 14px;
+    margin-bottom: 18px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
+  }
+  .fee-ref-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; flex-shrink: 0; margin-top: 1px; }
+  .fee-ref-val { font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; color: #1d4ed8; }
+
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 10px; }
+
+  .frb { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .frb-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .row-tag { background: #dbeafe; color: #1d4ed8; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .ff label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; }
+  .ff .req-mark { color: #dc2626; }
+  .ff input[type="number"], .ff input[type="text"] {
+    width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; color: #1e293b; outline: none; transition: border-color .15s, background .15s;
+  }
+  .ff input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  .ff input.warn { border-color: #f59e0b; background: #fffbeb; }
+  .ff input.good { border-color: #16a34a; background: #f0fdf4; }
+  .ff input.err { border-color: #dc2626; background: #fef2f2; }
+
+  .amt-hint { font-size: 11px; margin-top: 6px; min-height: 16px; line-height: 1.4; display: none; }
+  .amt-hint.show { display: block; }
+  .amt-hint.h-warn { color: #d97706; }
+  .amt-hint.h-good { color: #16a34a; }
+  .amt-hint.h-skip { color: #94a3b8; }
+  .amt-hint.h-err { color: #dc2626; font-weight: 600; }
+
+  .rg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rb {
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer;
+    border: 1px solid #d1d5db; background: #fff; color: #374151; transition: all .15s; user-select: none;
+  }
+  .rb.on { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
+
+  .vname-wrap { margin-top: 8px; display: none; }
+  .vname-wrap.show { display: block; }
+
+  .carveout-alert {
+    display: none; margin-top: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+    padding: 10px 12px; font-size: 12px; color: #92400e; line-height: 1.5;
+  }
+  .carveout-alert.show { display: block; }
+  .carveout-alert .fee-string-inline { font-family: 'SF Mono', 'Fira Code', monospace; color: #92400e; }
+
+  .notes-wrap { margin-top: 6px; }
+  .notes-wrap textarea {
+    width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 9px 12px;
+    font-size: 13px; color: #1e293b; outline: none; resize: none; height: 60px; font-family: inherit; transition: border-color .15s;
+  }
+  .notes-wrap textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  .notes-wrap textarea.req { border-color: #f59e0b; background: #fffbeb; }
+  .note-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; display: block; }
+  .note-req-hint { font-size: 11px; color: #d97706; margin-top: 5px; display: none; }
+  .note-req-hint.show { display: block; }
+  .hint-static { font-size: 11px; color: #94a3b8; margin-top: 6px; margin-bottom: 10px; }
+  .submit-err { font-size: 12px; color: #dc2626; margin-top: 10px; display: none; }
+  .submit-err.show { display: block; }
+
+  /* ── WARNING MODAL ── */
+  .warn-icon { width: 34px; height: 34px; border-radius: 50%; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+
+  /* ── CONFIRMATION CARD ── */
+  .confirm-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .confirm-icon.pass { background: #dcfce7; color: #16a34a; }
+  .confirm-icon.override { background: #fef3c7; color: #d97706; }
+  .pend-bar {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px;
+    margin-top: 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #92400e;
+  }
+  .esc-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .esc-box label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 8px; }
+  .esc-string { font-size: 13px; color: #1e293b; line-height: 1.6; }
+  .val-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; border: 1px solid; }
+  .val-row.pass { background: #f0fdf4; border-color: #bbf7d0; }
+  .val-row.override { background: #fffbeb; border-color: #fde68a; }
+  .val-row.skip { background: #f8fafc; border-color: #e2e8f0; }
+  .val-left { display: flex; align-items: center; gap: 10px; }
+  .val-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .val-icon.pass { background: #16a34a; color: #fff; }
+  .val-icon.override { background: #d97706; color: #fff; }
+  .val-icon.skip { background: #cbd5e1; color: #475569; }
+  .val-desc { font-size: 12px; color: #1e293b; }
+  .val-desc small { display: block; font-size: 11px; color: #64748b; margin-top: 2px; }
+  .val-comp { font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; line-height: 1.7; }
+  .val-comp .req { color: #d97706; }
+  .val-comp .appr { color: #94a3b8; }
+  .val-comp .gt { color: #16a34a; font-size: 10px; }
+  .val-comp .ov { color: #d97706; font-size: 10px; }
+  .what-next { font-size: 12px; color: #64748b; line-height: 1.8; margin-top: 16px; }
+  .divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
+
+  #escalation-confirm { display: none; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate" style="position:fixed;inset:0;z-index:9999;background:#1a2535;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="background:#fff;border-radius:12px;padding:32px;width:280px;box-shadow:0 10px 40px rgba(0,0,0,0.3);text-align:center;">
+    <div style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:4px;">HubPay Prototype</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Enter password to continue</div>
+    <input type="password" id="pw-input" placeholder="Password" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+    <button id="pw-submit" style="width:100%;padding:10px;border:none;border-radius:6px;background:#1a2535;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Enter</button>
+    <div id="pw-error" style="color:#dc2626;font-size:12px;margin-top:8px;display:none;">Incorrect password</div>
+  </div>
+</div>
+<script>
+(function () {
+  var PASSWORD = "mango";
+  var gate = document.getElementById("pw-gate");
+  var input = document.getElementById("pw-input");
+  var error = document.getElementById("pw-error");
+  function tryUnlock() {
+    if (input.value === PASSWORD) { gate.style.display = "none"; }
+    else { error.style.display = "block"; }
+  }
+  document.getElementById("pw-submit").addEventListener("click", tryUnlock);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+  input.focus();
+})();
+</script>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div id="sidebar-title">HubPay</div>
+    <span id="prototype-badge">Prototype</span>
+  </div>
+  <div class="nav-group-label">Fee Visibility &amp; Validation</div>
+  <button class="nav-item active">Invoice Line Item</button>
+  <hr class="nav-separator">
+  <div class="nav-group-label">Scope</div>
+  <div style="padding:0 16px 12px;color:#64748b;font-size:11.5px;line-height:1.7;">
+    Demonstrates Requirements 5, 5A &amp; 7 from the 2026-06-09 PPT Fee Visibility &amp; Validation PRD — the structured PNP024 escalation form, fee validation at point of escalation, and the generated escalation detail string, as they'd appear in HubPay.
+  </div>
+  <div id="sidebar-spacer"></div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="page-inner">
+    <div class="page-title">Invoice Line Item</div>
+    <div class="page-subtitle">HubPay — reviewing an invoice line item that requires fee approval</div>
+
+    <div class="demo-banner">
+      ⓘ Interactive prototype — enter a $ Amount in the escalation form to see validation behave against the order's fee schedule.
+    </div>
+
+    <!-- LINE ITEM CARD -->
+    <div class="card" id="line-item-card">
+      <div class="card-header">
+        <h2>Invoice Line Item — RT-2026-88341</h2>
+        <span class="badge badge-esc-fee">Fee Review Needed</span>
+      </div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label>Vendor</label><div class="value">Verisma</div></div>
+          <div class="field"><label>Vendor Type</label><div class="value">HIH</div></div>
+          <div class="field"><label>Project</label><div class="value">Centene ACA 2026</div></div>
+          <div class="field"><label>Vendor Invoice Number</label><div class="value mono">30108610032006292026164945</div></div>
+          <div class="field"><label>Requested Amount</label><div class="value" style="font-weight:700;">$65.00</div></div>
+          <div class="field"><label>Payment Method</label><div class="value">ACH</div></div>
+        </div>
+
+        <div class="fee-bar">
+          <div class="fee-inline" onclick="toggleFee()">
+            <div class="fee-label">Order fee schedule</div>
+            <div class="fee-amount">$35 / chart</div>
+            <div class="fee-expand-hint" id="feeHint">View full fee detail string ▾</div>
+          </div>
+          <div class="fee-full-panel" id="feePanel">
+            <div class="fee-string" id="feeScheduleString"></div>
+            <div class="fee-caption">Approved for Provider and General HIH, pre- and postpay, $35/chart, CNA $10. Verisma is a named HIH carveout at $50/chart, CNA $15. Ciox Health is excluded — not approved for any fee.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-escalate" onclick="openEscalationModal()">Escalate for Fee Approval (PNP024)</button>
+        <button class="btn-secondary" onclick="alert('Prototype only — not wired up.')">Deny Invoice</button>
+      </div>
+    </div>
+
+    <!-- ESCALATION CONFIRMATION CARD (hidden until submit) -->
+    <div class="card" id="escalation-confirm">
+      <div class="card-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="confirm-icon pass" id="confirmIcon">✓</div>
+          <h2 id="confirmTitle">Validation passed — escalation submitted</h2>
+        </div>
+        <span class="badge badge-esc-fee">PNP024</span>
+      </div>
+      <div class="card-body">
+        <div class="section-label">Validation results</div>
+        <div id="val-results"></div>
+        <div class="pend-bar">
+          <span style="font-size:15px;">⏸</span>
+          PNP024 applied to RT-2026-88341. Escalation routed to Hub → Routing → Chart Compass for client review.
+        </div>
+        <div class="esc-box">
+          <label>Escalation detail string (Req 5A) — generated and stored</label>
+          <div class="esc-string" id="esc-string"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="what-next" id="what-next"></div>
+        <div style="margin-top:16px;">
+          <button class="btn-secondary" onclick="resetDemo()">← Back to line item</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ESCALATION FORM MODAL -->
+<div class="modal-overlay" id="escModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Fee Approval Escalation — PNP024</div>
+    </div>
+    <div class="modal-body">
+
+      <div class="fee-ref">
+        <div class="fee-ref-lbl">Fee schedule</div>
+        <div class="fee-ref-val" id="feeRefVal"></div>
+      </div>
+
+      <div class="section-label">Fee rows — 1 to 2 rows per escalation</div>
+
+      <!-- Row 1 -->
+      <div class="frb">
+        <div class="frb-top"><span class="row-tag">ROW 1</span></div>
+        <div class="row-fields">
+          <div class="ff">
+            <label>$ Amount <span class="req-mark">*</span></label>
+            <input type="number" id="r1amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(1)" onchange="updateHint(1)"/>
+            <div class="amt-hint" id="r1hint"></div>
+          </div>
+          <div class="ff">
+            <label>Fee Type <span class="req-mark">*</span></label>
+            <div class="rg">
+              <div class="rb on" id="r1ft-chart" onclick="setFT(1,'chart')">Per Chart</div>
+              <div class="rb" id="r1ft-page" onclick="setFT(1,'page')">Per Page</div>
+              <div class="rb" id="r1ft-cna" onclick="setFT(1,'cna')">CNA Fee</div>
+            </div>
+          </div>
+          <div class="ff">
+            <label>Vendor <span class="req-mark">*</span></label>
+            <div class="rg">
+              <div class="rb on" id="r1v-prov" onclick="setV(1,'prov')">Provider</div>
+              <div class="rb" id="r1v-hih" onclick="setV(1,'hih')">HIH</div>
+            </div>
+            <div class="vname-wrap" id="r1vn-wrap">
+              <input type="text" id="r1vname" placeholder="Vendor name (required)" oninput="updateHint(1)"/>
+            </div>
+            <div class="carveout-alert" id="r1carveout">
+              Review the client fee details to determine whether this vendor has a carveout rate before submitting.
+              <span class="fee-string-inline" id="r1carveoutStr"></span>
+            </div>
+          </div>
+          <div class="ff">
+            <label>Payment Timing <span class="req-mark">*</span></label>
+            <div class="rg">
+              <div class="rb on" id="r1pt-pre" onclick="setPT(1,'pre')">Prepay</div>
+              <div class="rb" id="r1pt-post" onclick="setPT(1,'post')">Postpay</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2 -->
+      <div id="row2wrap" style="display:none;">
+        <div class="frb">
+          <div class="frb-top">
+            <span class="row-tag">ROW 2</span>
+            <button class="btn-rm" onclick="rmRow2()">✕ Remove row</button>
+          </div>
+          <div class="row-fields">
+            <div class="ff">
+              <label>$ Amount <span class="req-mark">*</span></label>
+              <input type="number" id="r2amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(2)" onchange="updateHint(2)"/>
+              <div class="amt-hint" id="r2hint"></div>
+            </div>
+            <div class="ff">
+              <label>Fee Type <span class="req-mark">*</span></label>
+              <div class="rg">
+                <div class="rb on" id="r2ft-chart" onclick="setFT(2,'chart')">Per Chart</div>
+                <div class="rb" id="r2ft-page" onclick="setFT(2,'page')">Per Page</div>
+                <div class="rb" id="r2ft-cna" onclick="setFT(2,'cna')">CNA Fee</div>
+              </div>
+            </div>
+            <div class="ff">
+              <label>Vendor <span class="req-mark">*</span></label>
+              <div class="rg">
+                <div class="rb on" id="r2v-prov" onclick="setV(2,'prov')">Provider</div>
+                <div class="rb" id="r2v-hih" onclick="setV(2,'hih')">HIH</div>
+              </div>
+              <div class="vname-wrap" id="r2vn-wrap">
+                <input type="text" id="r2vname" placeholder="Vendor name (required)" oninput="updateHint(2)"/>
+              </div>
+            </div>
+            <div class="ff">
+              <label>Payment Timing <span class="req-mark">*</span></label>
+              <div class="rg">
+                <div class="rb on" id="r2pt-pre" onclick="setPT(2,'pre')">Prepay</div>
+                <div class="rb" id="r2pt-post" onclick="setPT(2,'post')">Postpay</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hint-static" id="combo-hint">One row must be CNA. Cannot combine Per Chart and Per Page in the same escalation.</div>
+      </div>
+
+      <div id="addRowBtn">
+        <button class="btn-add" onclick="addRow2()">+ Add a row</button>
+      </div>
+
+      <div class="notes-wrap" style="margin-top:18px;">
+        <label class="note-lbl">Agent note <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <textarea id="agent-note" placeholder="Add a note if needed..."></textarea>
+      </div>
+      <div class="submit-err" id="submit-err"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEscalationModal()">Go Back</button>
+      <button class="btn-primary" id="submitEscBtn" onclick="submitEsc()">Submit Escalation</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Fee schedule (order-level) ───────────────────────────────────────────
+// Prov+HIH combined Pre+Postpay $35/chart, CNA $10 | Verisma (carveout) $50/chart, CNA $15 | Not approved for Ciox Health
+const FEE_SCHEDULE_STRING = 'Prov+HIH Pre+Postpay $35, CNA $10 | Verisma $50, CNA $15 | Not approved for Ciox Health';
+document.getElementById('feeScheduleString').textContent = FEE_SCHEDULE_STRING;
+document.getElementById('feeRefVal').textContent = FEE_SCHEDULE_STRING;
+document.getElementById('r1carveoutStr').textContent = FEE_SCHEDULE_STRING;
+
+const HAS_CARVEOUT = true;
+
+const SCHEDULE = {
+  'prov|pre|chart': 35, 'prov|post|chart': 35, 'prov|pre|cna': 10, 'prov|post|cna': 10,
+  'hih|pre|chart':  35, 'hih|post|chart':  35, 'hih|pre|cna':  10, 'hih|post|cna':  10,
+};
+
+const R = {
+  1: { ft: 'chart', v: 'prov', pt: 'pre' },
+  2: { ft: 'chart', v: 'prov', pt: 'pre' },
+};
+let hasRow2 = false;
+
+function fmt(n) {
+  const f = parseFloat(n);
+  if (isNaN(f) || f === 0) return '$0';
+  return '$' + (Number.isInteger(f) ? f : f.toFixed(2));
+}
+function ftLabel(ft) { return ft==='chart' ? 'per chart' : ft==='page' ? 'per page' : 'CNA fee'; }
+function vLabel(row) {
+  const vn = document.getElementById('r'+row+'vname')?.value?.trim() || '';
+  return R[row].v === 'prov' ? 'Provider' : (vn ? 'HIH ('+vn+')' : 'HIH');
+}
+function ptLabel(pt) { return pt === 'post' ? 'Postpay' : 'Prepay'; }
+function lookupApproved(v, pt, ft) {
+  const key = v+'|'+pt+'|'+ft;
+  return (key in SCHEDULE) ? SCHEDULE[key] : null;
+}
+
+// ── Fee expand ────────────────────────────────────────────────────────────
+function toggleFee() {
+  const open = document.getElementById('feePanel').classList.toggle('open');
+  document.getElementById('feeHint').textContent = open ? 'Hide ▴' : 'View full fee detail string ▾';
+}
+
+// ── Modal open/close ──────────────────────────────────────────────────────
+function openEscalationModal() {
+  // Pre-populate Row 1 from the invoice line item already on screen
+  setV(1, 'hih');
+  document.getElementById('r1vname').value = 'Verisma';
+  document.getElementById('r1amt').value = '65.00';
+  updateHint(1);
+  document.getElementById('escModal').classList.add('open');
+}
+function closeEscalationModal() { document.getElementById('escModal').classList.remove('open'); }
+function closeWarnModal() { document.getElementById('warnModal').classList.remove('open'); }
+
+// ── Radios ────────────────────────────────────────────────────────────────
+function setFT(row, val) {
+  ['chart','page','cna'].forEach(o => document.getElementById('r'+row+'ft-'+o).classList.toggle('on', o===val));
+  R[row].ft = val;
+  updateHint(row);
+  if (hasRow2) updateComboHint();
+}
+function updateComboHint() {
+  const hint = document.getElementById('combo-hint');
+  if (!hint) return;
+  const ft1 = R[1].ft, ft2 = R[2].ft;
+  const invalid = (ft1 === 'chart' && ft2 === 'page') || (ft1 === 'page' && ft2 === 'chart');
+  if (invalid) {
+    hint.textContent = '⚠ Cannot combine Per Chart and Per Page in the same escalation.';
+    hint.style.color = '#d97706';
+  } else {
+    hint.textContent = 'One row must be CNA. Cannot combine Per Chart and Per Page in the same escalation.';
+    hint.style.color = '#94a3b8';
+  }
+}
+function setV(row, val) {
+  ['prov','hih'].forEach(o => document.getElementById('r'+row+'v-'+o).classList.toggle('on', o===val));
+  R[row].v = val;
+  document.getElementById('r'+row+'vn-wrap').classList.toggle('show', val==='hih');
+  if (row === 1) {
+    document.getElementById('r1carveout').classList.toggle('show', val==='hih' && HAS_CARVEOUT);
+  }
+  updateHint(row);
+}
+function setPT(row, val) {
+  ['pre','post'].forEach(o => document.getElementById('r'+row+'pt-'+o).classList.toggle('on', o===val));
+  R[row].pt = val;
+  updateHint(row);
+}
+
+// ── Inline amount hint ────────────────────────────────────────────────────
+function updateHint(row) {
+  const input    = document.getElementById('r'+row+'amt');
+  const hint     = document.getElementById('r'+row+'hint');
+  const amt      = parseFloat(input.value);
+  const approved = lookupApproved(R[row].v, R[row].pt, R[row].ft);
+
+  input.classList.remove('warn','good','err');
+  hint.className = 'amt-hint';
+  hint.textContent = '';
+
+  if (isNaN(amt) || input.value === '') { refreshSubmitState(); return; }
+
+  if (approved === null) {
+    hint.className = 'amt-hint h-skip show';
+    hint.textContent = 'No approved rate for this combination — validation will be skipped.';
+    refreshSubmitState();
+    return;
+  }
+
+  if (amt > approved) {
+    input.classList.add('good');
+    hint.className = 'amt-hint h-good show';
+    hint.textContent = `✓ Exceeds approved ${fmt(approved)} — valid escalation.`;
+  } else {
+    input.classList.add('err');
+    hint.className = 'amt-hint h-err show';
+    const rel = amt === approved ? 'equals' : 'does not exceed';
+    hint.textContent = `✗ ${fmt(amt)} ${rel} the approved ${fmt(approved)} — not a valid escalation. Remove the amount or delete this row to continue.`;
+  }
+  refreshSubmitState();
+}
+
+// ── Submit gating ─────────────────────────────────────────────────────────
+function hasInvalidRow() {
+  const rows = hasRow2 ? [1,2] : [1];
+  return rows.some(r => {
+    const amt      = parseFloat(document.getElementById('r'+r+'amt').value);
+    const approved = lookupApproved(R[r].v, R[r].pt, R[r].ft);
+    return !isNaN(amt) && approved !== null && amt <= approved;
+  });
+}
+function refreshSubmitState() {
+  const btn = document.getElementById('submitEscBtn');
+  const invalid = hasInvalidRow();
+  btn.disabled = invalid;
+  const errEl = document.getElementById('submit-err');
+  if (invalid) {
+    errEl.textContent = 'One or more rows do not exceed the client-approved rate. Remove the amount or delete the row before submitting.';
+    errEl.classList.add('show');
+  } else {
+    errEl.classList.remove('show');
+  }
+}
+
+// ── Row 2 ─────────────────────────────────────────────────────────────────
+function addRow2() {
+  hasRow2 = true;
+  document.getElementById('row2wrap').style.display = 'block';
+  document.getElementById('addRowBtn').style.display = 'none';
+  updateComboHint();
+  refreshSubmitState();
+}
+function rmRow2() {
+  hasRow2 = false;
+  document.getElementById('row2wrap').style.display = 'none';
+  document.getElementById('addRowBtn').style.display = 'block';
+  const h = document.getElementById('r2hint');
+  h.className = 'amt-hint'; h.textContent = '';
+  document.getElementById('r2amt').classList.remove('warn','good','err');
+  refreshSubmitState();
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────
+function submitEsc() {
+  const errEl = document.getElementById('submit-err');
+  errEl.classList.remove('show');
+
+  if (hasInvalidRow()) {
+    refreshSubmitState();
+    return;
+  }
+
+  if (hasRow2) {
+    const ft1 = R[1].ft, ft2 = R[2].ft;
+    if ((ft1 === 'chart' && ft2 === 'page') || (ft1 === 'page' && ft2 === 'chart')) {
+      errEl.textContent = 'Per Chart and Per Page cannot be combined in the same escalation.';
+      errEl.classList.add('show');
+      return;
+    }
+    if (ft1 !== 'cna' && ft2 !== 'cna') {
+      errEl.textContent = 'When submitting two rows, at least one must be a CNA fee.';
+      errEl.classList.add('show');
+      return;
+    }
+  }
+
+  if (R[1].v === 'hih' && !document.getElementById('r1vname').value.trim()) {
+    errEl.textContent = 'Vendor name is required when Vendor = HIH.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  finalizeEscalation();
+}
+
+function finalizeEscalation() {
+  closeEscalationModal();
+  buildConfirmation();
+  document.getElementById('line-item-card').style.display = 'none';
+  document.getElementById('escalation-confirm').style.display = 'block';
+}
+
+// ── Build confirmation card ───────────────────────────────────────────────
+function buildConfirmation() {
+  const rows = hasRow2 ? [1,2] : [1];
+  let html = '';
+
+  rows.forEach(r => {
+    const amt      = parseFloat(document.getElementById('r'+r+'amt').value) || 0;
+    const approved = lookupApproved(R[r].v, R[r].pt, R[r].ft);
+    const vl       = vLabel(r);
+    const ptl      = ptLabel(R[r].pt);
+    const ftl      = ftLabel(R[r].ft);
+    let cls, iconCls, iconChar, small, compHtml;
+
+    if (approved === null) {
+      cls='skip'; iconCls='skip'; iconChar='—';
+      small = 'No matching fee schedule entry — validation skipped.';
+      compHtml = `<div class="appr" style="color:#94a3b8;">No approved rate</div>`;
+    } else {
+      cls='pass'; iconCls='pass'; iconChar='✓';
+      small = 'Requested amount exceeds approved rate. Escalation valid.';
+      compHtml = `<div class="req">Requested ${fmt(amt)}</div><div class="appr">Approved ${fmt(approved)}</div><div class="gt">${fmt(amt)} &gt; ${fmt(approved)} ✓</div>`;
+    }
+
+    html += `<div class="val-row ${cls}">
+      <div class="val-left">
+        <div class="val-icon ${iconCls}">${iconChar}</div>
+        <div class="val-desc">${ftl.charAt(0).toUpperCase()+ftl.slice(1)} — ${vl}, ${ptl}<small>${small}</small></div>
+      </div>
+      <div class="val-comp">${compHtml}</div>
+    </div>`;
+  });
+
+  document.getElementById('val-results').innerHTML = html;
+
+  document.getElementById('confirmIcon').className = 'confirm-icon pass';
+  document.getElementById('confirmIcon').textContent = '✓';
+  document.getElementById('confirmTitle').textContent = 'Validation passed — escalation submitted';
+
+  const r1amt = parseFloat(document.getElementById('r1amt').value) || 0;
+  const r2amt = hasRow2 ? (parseFloat(document.getElementById('r2amt').value) || 0) : 0;
+  let str = `${vLabel(1)} has requested ${ptLabel(R[1].pt)} ${fmt(r1amt)} ${ftLabel(R[1].ft)}`;
+  if (hasRow2 && r2amt > 0) str += ` and ${fmt(r2amt)} CNA fee`;
+  str += '.';
+  const note = document.getElementById('agent-note').value.trim();
+  if (note) str += ` Agent note: ${note}`;
+  document.getElementById('esc-string').textContent = str;
+
+  document.getElementById('what-next').innerHTML =
+    '<strong>What happens next:</strong> The escalation detail string and structured fee data are sent to Chart Compass via Hub and Routing. The client will see this alongside the order fee schedule and can Approve, Edit, or Decline. Their response will return to this invoice line item in HubPay.';
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────
+function resetDemo() {
+  document.getElementById('r1amt').value = '';
+  document.getElementById('r2amt').value = '';
+  document.getElementById('r1vname').value = '';
+  document.getElementById('r2vname').value = '';
+  [1,2].forEach(r => {
+    const h = document.getElementById('r'+r+'hint');
+    h.className = 'amt-hint'; h.textContent = '';
+    document.getElementById('r'+r+'amt').classList.remove('warn','good','err');
+  });
+  document.getElementById('r1carveout').classList.remove('show');
+  document.getElementById('agent-note').value = '';
+  document.getElementById('submit-err').classList.remove('show');
+  setFT(1,'chart'); setV(1,'prov'); setPT(1,'pre');
+  setFT(2,'chart'); setV(2,'prov'); setPT(2,'pre');
+  if (hasRow2) rmRow2();
+  refreshSubmitState();
+  document.getElementById('escalation-confirm').style.display = 'none';
+  document.getElementById('line-item-card').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
