@@ -47,6 +47,10 @@
     background: #fafbfc; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px;
   }
   .no-ppt-row label { font-size: 14px; font-weight: 500; cursor: pointer; }
+  .question-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .question-label { font-size: 14px; font-weight: 500; }
+  .radio-group { display: flex; gap: 20px; }
+  .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 400; cursor: pointer; }
   table.rows { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.rows th {
     text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
@@ -307,7 +311,7 @@ function buildFeeText() {
     const lbl = vendorLabel(r);
     if (!seenExcl.has(lbl)) { seenExcl.add(lbl); excludedLabels.push(lbl); }
   });
-  const exclusionSegment = excludedLabels.length ? `Not approved for ${excludedLabels.join(", ")}.` : "";
+  const exclusionSegment = excludedLabels.length ? `Not approved for ${excludedLabels.join(", ")}` : "";
   const perPageSegment = state.approvalRequiredPerPage ? "Approval required for all per page fees" : "";
 
   const all = [...nonExclusionSegments, exclusionSegment, perPageSegment].filter(Boolean);
@@ -366,13 +370,19 @@ function renderForm() {
     <div class="step-indicator"><span class="on">1. Build schedule</span> · <span>2. Review</span> · <span>3. Confirm</span></div>
 
     <div class="card">
-      <div class="no-ppt-row">
-        <input type="checkbox" id="noPPT" ${state.noPPT ? "checked" : ""}>
-        <label for="noPPT">Approval required for all PPT fees</label>
+      <div class="no-ppt-row question-row">
+        <label class="question-label">Is approval required for all PPT fees?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="noPPT" value="yes" ${state.noPPT ? "checked" : ""}> Yes</label>
+          <label><input type="radio" name="noPPT" value="no" ${!state.noPPT ? "checked" : ""}> No</label>
+        </div>
       </div>
-      <div class="no-ppt-row">
-        <input type="checkbox" id="approvalRequiredPerPage" ${state.approvalRequiredPerPage ? "checked" : ""} ${state.noPPT ? "disabled" : ""}>
-        <label for="approvalRequiredPerPage">Approval required for all per page fees</label>
+      <div class="no-ppt-row question-row">
+        <label class="question-label">Is approval required for all per page fees?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="approvalRequiredPerPage" value="yes" ${state.approvalRequiredPerPage ? "checked" : ""} ${state.noPPT ? "disabled" : ""}> Yes</label>
+          <label><input type="radio" name="approvalRequiredPerPage" value="no" ${!state.approvalRequiredPerPage ? "checked" : ""} ${state.noPPT ? "disabled" : ""}> No</label>
+        </div>
       </div>
 
       ${state.noPPT ? "" : `
@@ -493,21 +503,20 @@ function assumptionsHtml() {
 }
 
 function attachFormListeners() {
-  document.getElementById("noPPT").addEventListener("change", e => {
-    state.noPPT = e.target.checked;
+  document.querySelectorAll('input[name="noPPT"]').forEach(el => el.addEventListener("change", e => {
+    state.noPPT = e.target.value === "yes";
     render();
-  });
+  }));
 
-  const perPageCb = document.getElementById("approvalRequiredPerPage");
-  if (perPageCb) perPageCb.addEventListener("change", e => {
-    state.approvalRequiredPerPage = e.target.checked;
+  document.querySelectorAll('input[name="approvalRequiredPerPage"]').forEach(el => el.addEventListener("change", e => {
+    state.approvalRequiredPerPage = e.target.value === "yes";
     if (state.approvalRequiredPerPage) {
       state.rows.forEach(r => {
         if (r.feeType === "Per Page") { r.feeType = "Per Chart"; r.maxAmount = ""; }
       });
     }
     render();
-  });
+  }));
 
   const addBtn = document.getElementById("addRowBtn");
   if (addBtn) addBtn.addEventListener("click", () => {
