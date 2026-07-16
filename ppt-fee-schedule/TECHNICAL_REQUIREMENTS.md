@@ -25,7 +25,7 @@
 
 ### In scope (covered by the prototype, and therefore by this spec)
 - The fee schedule row-entry form itself: fields, conditional visibility, defaults, per-field validation.
-- The two order-level toggles ("No PPT fee approvals" and "Approval required for all per page fees") and their effect on the form and generated text.
+- The two order-level toggles ("Is approval required for all PPT fees?" and "Is approval required for all per page fees?") and their effect on the form and generated text.
 - Duplicate-row detection and blocking logic.
 - The fee-text preview generation algorithm (Section 7) — this is the core deliverable, since it's machine-parsed downstream and must be reproduced exactly.
 - The Review → Approve/Go Back/Help flow as a UI state machine.
@@ -52,8 +52,8 @@ The original acceptance criteria include several requirements that describe back
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `noPPT` | boolean | `false` | Backs the "Approval required for all PPT fees" checkbox — no fee schedule rows apply when checked. |
-| `approvalRequiredPerPage` | boolean | `false` | Backs the "Approval required for all per page fees" checkbox. |
+| `noPPT` | boolean | `false` | Backs the "Is approval required for all PPT fees?" Yes/No radio question — no fee schedule rows apply when "Yes" is selected. |
+| `approvalRequiredPerPage` | boolean | `false` | Backs the "Is approval required for all per page fees?" Yes/No radio question. |
 | `rows` | array of Row | one empty Row | See 3.2. |
 
 ### 3.2 Row fields
@@ -100,18 +100,18 @@ Additional dynamic behavior:
 
 ## 5. Order-level Controls
 
-Two order-level checkboxes, both above the row table:
+Two order-level Yes/No radio questions, both above the row table. Each renders as a labeled question with two mutually-exclusive radio options ("Yes" / "No"), defaulting to "No" — not checkboxes.
 
-1. **"Approval required for all PPT fees"** (`noPPT`)
-   - When checked: the entire row table and "+ Add row" control are hidden (not just disabled — not rendered at all). Row *data* is retained in memory but ignored. The fee text preview becomes the fixed string `"Approval required for all PPT fees"`, overriding everything else including `approvalRequiredPerPage` and all row content. Row validation and duplicate-row validation are both skipped entirely when this is checked (Review proceeds unconditionally).
-   - When unchecked: form reverts to the row table with whatever row data was already in state.
+1. **"Is approval required for all PPT fees?"** (`noPPT`)
+   - When "Yes" is selected: the entire row table and "+ Add row" control are hidden (not just disabled — not rendered at all). Row *data* is retained in memory but ignored. The fee text preview becomes the fixed string `"Approval required for all PPT fees"`, overriding everything else including `approvalRequiredPerPage` and all row content. Row validation and duplicate-row validation are both skipped entirely when "Yes" is selected (Review proceeds unconditionally).
+   - When "No" is selected: form reverts to the row table with whatever row data was already in state.
 
-2. **"Approval required for all per page fees"** (`approvalRequiredPerPage`)
-   - Disabled (not interactable) whenever `noPPT` is checked, but **its underlying value is not cleared** — if a user checks `noPPT`, then unchecks it later, `approvalRequiredPerPage` retains whatever value it held before.
-   - When checked: removes `"Per Page"` from the Fee Type dropdown on every row (present and future), and for every existing row currently set to `"Per Page"`, resets `feeType` to `"Per Chart"` and clears `maxAmount`. This reset is applied immediately and silently — no confirmation, and (prototype behavior) no re-run of duplicate detection after the bulk reset, meaning a mass reset could create a new duplicate combination that isn't caught until the user clicks Review (which does run the full duplicate check as a final gate).
-   - When checked, appends the fixed trailing segment `"Approval required for all per page fees"` to the generated fee text (see Section 7, Step E), regardless of whether any row currently has fee data.
+2. **"Is approval required for all per page fees?"** (`approvalRequiredPerPage`)
+   - Disabled (not interactable) whenever `noPPT` is "Yes", but **its underlying value is not cleared** — if a user selects "Yes" on `noPPT`, then switches it back to "No" later, `approvalRequiredPerPage` retains whatever value it held before.
+   - When "Yes" is selected: removes `"Per Page"` from the Fee Type dropdown on every row (present and future), and for every existing row currently set to `"Per Page"`, resets `feeType` to `"Per Chart"` and clears `maxAmount`. This reset is applied immediately and silently — no confirmation, and (prototype behavior) no re-run of duplicate detection after the bulk reset, meaning a mass reset could create a new duplicate combination that isn't caught until the user clicks Review (which does run the full duplicate check as a final gate).
+   - When "Yes" is selected, appends the fixed trailing segment `"Approval required for all per page fees"` to the generated fee text (see Section 7, Step E), regardless of whether any row currently has fee data.
 
-**Precedence:** `noPPT` unconditionally overrides everything (rows, `approvalRequiredPerPage`, duplicate checks, validation). `approvalRequiredPerPage` only has effect when `noPPT` is unchecked.
+**Precedence:** `noPPT` unconditionally overrides everything (rows, `approvalRequiredPerPage`, duplicate checks, validation). `approvalRequiredPerPage` only has effect when `noPPT` is "No".
 
 ---
 
@@ -266,7 +266,7 @@ buildFeeText():
   8. STEP E — exclusions:
      excludedLabels = deduplicated vendorLabel(r) for each row in `excluded`, in first-seen order
      exclusionSegment = excludedLabels.length > 0
-                          ? "Not approved for " + join(excludedLabels, ", ") + "."
+                          ? "Not approved for " + join(excludedLabels, ", ")
                           : ""
 
   9. perPageSegment = approvalRequiredPerPage ? "Approval required for all per page fees" : ""
@@ -311,18 +311,18 @@ Row B: `General HIH`, `Post Pay Only`, `Per Chart`, amount `20`
 **T7 — exclusion row appended after a normal schedule**
 Row A: `Provider/Hospital`, `Pre+Post Pay`, `Per Chart`, amount `15`
 Row B: `HIH Carveout`, name `Gamma`, `Exclusion`
-→ `"Pre+Postpay | Prov $15 | Not approved for Gamma."`
+→ `"Pre+Postpay | Prov $15 | Not approved for Gamma"`
 
 **T8 — "approval required for all per page fees" trailing segment**
 Row: `Provider/Hospital`, `Pre+Post Pay`, `Per Chart`, amount `15`; `approvalRequiredPerPage = true`
 → `"Pre+Postpay | Prov $15 | Approval required for all per page fees"`
 
-**T9 — "No PPT fee approvals" overrides everything**
+**T9 — "Is approval required for all PPT fees?" = Yes overrides everything**
 `noPPT = true` (rows and `approvalRequiredPerPage` irrelevant, even if populated)
 → `"Approval required for all PPT fees"`
 
 **T10 — empty/blank state**
-No rows with any amount or CNA fee entered, both checkboxes off
+No rows with any amount or CNA fee entered, both radio questions set to "No"
 → `""` (UI shows placeholder text only; do not confuse the placeholder with actual output)
 
 **T11 — $0 / blank amount is silently omitted**
@@ -337,7 +337,7 @@ The prototype is a 4-state client-side machine: `form → review → confirmatio
 
 | State | Entered from | UI | Exits |
 |---|---|---|---|
-| `form` | initial load; "Go Back" from `review`; "Start a new fee schedule" from `confirmation` | Row table (or hidden if `noPPT`), both checkboxes, live fee-text preview, "Review" button | → `review` (see gating below) |
+| `form` | initial load; "Go Back" from `review`; "Start a new fee schedule" from `confirmation` | Row table (or hidden if `noPPT`), both radio questions, live fee-text preview, "Review" button | → `review` (see gating below) |
 | `review` | "Review" button on `form` | Read-only rendering of every row (or "Approval required for all PPT fees." if `noPPT`) plus the final fee-text preview; buttons: Help, Go Back, Approve | → `help`, → `form` (Go Back), → `confirmation` (Approve) |
 | `help` | "Help" button on `review` | Static message: submit a PPI ticket and post in `#support-switchboard-cutover` in Slack; single "Back to Review" button | → `review` only |
 | `confirmation` | "Approve" button on `review` | Static success message + the submitted fee text + "Start a new fee schedule" button | → `form` (fully resets all state: `noPPT=false`, rows reset to one empty row, errors cleared) |
@@ -349,7 +349,7 @@ The prototype is a 4-state client-side machine: `form → review → confirmatio
 
 **Approve:** transitions to `confirmation` only. **Prototype behavior — production must replace this:** there is no backend call, no persistence, no activation of a real order fee schedule, and no error path (network failure, conflict, etc.) is modeled. The confirmation text ("This fee schedule is now the active PPT fee schedule... Any previously active schedule ... has been replaced") is static copy, not a real system state change — the actual replace-prior-schedule and activation logic must be designed by the receiving team (Section 9).
 
-**Go Back:** returns to `form` with all row data, checkbox state, and errors fully intact (no state is cleared) — this part is safe to carry over directly into production.
+**Go Back:** returns to `form` with all row data, radio question state, and errors fully intact (no state is cleared) — this part is safe to carry over directly into production.
 
 **Help:** navigates to a static help screen. Content is exactly: "Please submit a PPI ticket describing the issue, and post in `#support-switchboard-cutover` in Slack." No ticket is actually created by the form; it's instructional text only. "Back to Review" returns to `review` with state intact.
 
