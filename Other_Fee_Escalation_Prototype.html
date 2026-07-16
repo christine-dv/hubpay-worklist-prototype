@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Other Fee Escalation Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    min-height: 100vh;
+    font-size: 13px;
+    color: #1e293b;
+  }
+
+  #main { max-width: 720px; margin: 0 auto; padding: 40px 28px; }
+  .page-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: #64748b; margin-bottom: 18px; }
+
+  .demo-banner {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; color: #1d4ed8; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ── CARD ── */
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .card-header {
+    padding: 12px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header h2 { font-size: 14px; font-weight: 700; color: #0f172a; }
+  .card-body { padding: 18px; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin-bottom: 4px; }
+  .field label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
+  .field .value { font-size: 13px; color: #1e293b; }
+  .field .value.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #475569; }
+
+  .fee-bar { border-top: 1px solid #f1f5f9; margin-top: 16px; padding-top: 14px; }
+  .fee-inline { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .fee-inline:hover .fee-label { color: #1e293b; }
+  .fee-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; transition: color .15s; }
+  .fee-amount { font-size: 13px; font-weight: 600; color: #1d4ed8; }
+  .fee-expand-hint { font-size: 11px; color: #94a3b8; margin-left: auto; }
+  .fee-full-panel { display: none; margin-top: 10px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe; }
+  .fee-full-panel.open { display: block; }
+  .fee-string { font-size: 12px; color: #1d4ed8; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.7; }
+  .fee-caption { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+  .card-actions { padding: 14px 18px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: #3b82f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+  .btn-primary:disabled:hover { background: #cbd5e1; }
+  .btn-secondary {
+    background: #fff; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  }
+  .btn-secondary:hover { background: #f9fafb; }
+  .btn-escalate {
+    background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn-escalate:hover { background: #fde68a; }
+
+  /* ── BADGES ── */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-esc-fee { background: #fef3c7; color: #d97706; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1000;
+    align-items: center; justify-content: center; overflow-y: auto; padding: 30px 0;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 10px; padding: 0; max-width: 560px; width: 92%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); max-height: 90vh; display: flex; flex-direction: column; }
+  .modal.modal-sm { max-width: 440px; }
+  .modal-head { padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .modal-close { background: none; border: none; font-size: 15px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px; }
+  .modal-close:hover { color: #475569; }
+  .modal-body { padding: 20px 24px; overflow-y: auto; }
+  .modal-body p { font-size: 13px; color: #475569; line-height: 1.5; }
+  .modal-actions { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end; }
+
+  .fee-ref {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 14px;
+    margin-bottom: 18px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
+  }
+  .fee-ref-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; flex-shrink: 0; margin-top: 1px; }
+  .fee-ref-val { font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; color: #1d4ed8; }
+
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 10px; }
+
+  .frb { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .ff label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; }
+  .ff .req-mark { color: #dc2626; }
+  .ff input[type="number"], .ff input[type="text"], .ff select {
+    width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; color: #1e293b; outline: none; transition: border-color .15s, background .15s;
+  }
+  .ff input:focus, .ff select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  .ff input.warn { border-color: #f59e0b; background: #fffbeb; }
+  .ff input.good { border-color: #16a34a; background: #f0fdf4; }
+  .ff input.err { border-color: #dc2626; background: #fef2f2; }
+
+  .chk-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #1e293b; cursor: pointer; }
+
+  .amt-hint { font-size: 11px; margin-top: 6px; min-height: 16px; line-height: 1.4; display: none; }
+  .amt-hint.show { display: block; }
+  .amt-hint.h-warn { color: #d97706; }
+  .amt-hint.h-good { color: #16a34a; }
+  .amt-hint.h-skip { color: #94a3b8; }
+  .amt-hint.h-err { color: #dc2626; font-weight: 600; }
+
+  .rg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rb {
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer;
+    border: 1px solid #d1d5db; background: #fff; color: #374151; transition: all .15s; user-select: none;
+  }
+  .rb.on { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
+
+  .vname-wrap { margin-top: 8px; display: none; }
+  .vname-wrap.show { display: block; }
+
+  .vendor-combo { position: relative; }
+  .vendor-combo input.has-clear { padding-right: 26px; }
+  .vendor-clear-btn {
+    position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+    background: none; border: none; color: #64748b; font-size: 15px; line-height: 1;
+    cursor: pointer; padding: 3px 5px; border-radius: 4px;
+  }
+  .vendor-clear-btn:hover { color: #dc2626; background: #fef2f2; }
+  .link-btn {
+    background: none; border: none; color: #1d4ed8; font-size: 11px; cursor: pointer;
+    padding: 3px 0 0; text-decoration: underline;
+  }
+  .vendor-combo-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 60; margin: 2px 0 0; padding: 4px 0;
+    list-style: none; background: #fff; border: 1px solid #c7cdd6; border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(20, 25, 40, 0.12); max-height: 190px; overflow-y: auto;
+  }
+  .vendor-combo-list.hidden { display: none; }
+  .vendor-combo-list li { padding: 6px 10px; font-size: 13px; cursor: pointer; color: #1e293b; }
+  .vendor-combo-list li:hover, .vendor-combo-list li.active { background: #f0f4fd; }
+  .vendor-combo-list li.no-match { color: #b7bcc4; cursor: default; }
+  .vendor-combo-list li.no-match:hover { background: none; }
+  .vendor-combo-list li.other-option { border-top: 1px solid #eef0f3; color: #1d4ed8; font-weight: 600; }
+  .vendor-fee-badge { font-size: 12px; font-weight: 600; color: #1d4ed8; margin-top: 8px; }
+
+  .carveout-alert {
+    display: none; margin-top: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+    padding: 10px 12px; font-size: 12px; color: #92400e; line-height: 1.5;
+  }
+  .carveout-alert.show { display: block; }
+
+  .notes-wrap { margin-top: 6px; }
+  .notes-wrap textarea {
+    width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 9px 12px;
+    font-size: 13px; color: #1e293b; outline: none; resize: none; height: 60px; font-family: inherit; transition: border-color .15s;
+  }
+  .notes-wrap textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  .note-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; display: block; }
+  .submit-err { font-size: 12px; color: #dc2626; margin-top: 10px; display: none; }
+  .submit-err.show { display: block; }
+
+  .esc-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-top: 18px; }
+  .esc-preview label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 8px; }
+  .esc-preview-text { font-size: 13px; color: #1e293b; line-height: 1.6; }
+
+  /* ── CONFIRMATION CARD ── */
+  .confirm-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .confirm-icon.pass { background: #dcfce7; color: #16a34a; }
+  .pend-bar {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px;
+    margin-top: 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #92400e;
+  }
+  .esc-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .esc-box label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 8px; }
+  .esc-string { font-size: 13px; color: #1e293b; line-height: 1.6; }
+  .val-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; border: 1px solid; }
+  .val-row.pass { background: #f0fdf4; border-color: #bbf7d0; }
+  .val-row.override { background: #fffbeb; border-color: #fde68a; }
+  .val-row.skip { background: #f8fafc; border-color: #e2e8f0; }
+  .val-left { display: flex; align-items: center; gap: 10px; }
+  .val-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .val-icon.pass { background: #16a34a; color: #fff; }
+  .val-icon.override { background: #d97706; color: #fff; }
+  .val-icon.skip { background: #cbd5e1; color: #475569; }
+  .val-desc { font-size: 12px; color: #1e293b; }
+  .val-desc small { display: block; font-size: 11px; color: #64748b; margin-top: 2px; }
+  .val-comp { font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; line-height: 1.7; }
+  .val-comp .req { color: #d97706; }
+  .val-comp .appr { color: #94a3b8; }
+  .val-comp .gt { color: #16a34a; font-size: 10px; }
+  .val-comp .ov { color: #d97706; font-size: 10px; }
+  .what-next { font-size: 12px; color: #64748b; line-height: 1.8; margin-top: 16px; }
+  .divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
+
+  #escalation-confirm { display: none; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate" style="position:fixed;inset:0;z-index:9999;background:#1a2535;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="background:#fff;border-radius:12px;padding:32px;width:280px;box-shadow:0 10px 40px rgba(0,0,0,0.3);text-align:center;">
+    <div style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:4px;">Escalation Prototype</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Enter password to continue</div>
+    <input type="password" id="pw-input" placeholder="Password" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+    <button id="pw-submit" style="width:100%;padding:10px;border:none;border-radius:6px;background:#1a2535;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Enter</button>
+    <div id="pw-error" style="color:#dc2626;font-size:12px;margin-top:8px;display:none;">Incorrect password</div>
+  </div>
+</div>
+<script>
+(function () {
+  var PASSWORD = "mango";
+  var gate = document.getElementById("pw-gate");
+  var input = document.getElementById("pw-input");
+  var error = document.getElementById("pw-error");
+  function tryUnlock() {
+    if (input.value === PASSWORD) { gate.style.display = "none"; }
+    else { error.style.display = "block"; }
+  }
+  document.getElementById("pw-submit").addEventListener("click", tryUnlock);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+  input.focus();
+})();
+</script>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="page-title">Other Fee Escalation Prototype</div>
+  <div class="page-subtitle">Structured PNP024 escalation form used by agents in HIH Admin and NexReach.</div>
+
+  <div class="demo-banner">
+    ⓘ Interactive prototype — unlike HubPay, this agent has no invoice already on file, so every field (vendor, timing, amount) is entered fresh at the point of escalation.
+  </div>
+
+  <!-- RETRIEVAL TARGET CARD -->
+  <div class="card" id="rt-card">
+    <div class="card-header">
+      <h2>Retrieval Target — RT-2026-88341</h2>
+      <span class="badge badge-esc-fee">Fee Review Needed</span>
+    </div>
+    <div class="card-body">
+      <div class="field-grid">
+        <div class="field"><label>Project</label><div class="value">Centene ACA 2026</div></div>
+        <div class="field"><label>RT Status</label><div class="value">BLOCKED — PNP_6_DIRECT_ACCESS_TO_EMR</div></div>
+      </div>
+
+      <div class="fee-bar">
+        <div class="fee-inline" onclick="toggleFee()">
+          <div class="fee-label">Order fee schedule</div>
+          <div class="fee-amount">$35 / chart</div>
+          <div class="fee-expand-hint" id="feeHint">View full fee detail string ▾</div>
+        </div>
+        <div class="fee-full-panel" id="feePanel">
+          <div class="fee-string" id="feeScheduleString"></div>
+          <div class="fee-caption">Approved for Provider and General HIH, pre- and postpay, $35/chart, CNA $10. Verisma is a named HIH carveout at $50/chart, CNA $15. MRO is excluded — not approved for any fee.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <button class="btn-escalate" onclick="openEscalationModal()">Escalate for Fee Approval (PNP024)</button>
+    </div>
+  </div>
+
+  <!-- ESCALATION CONFIRMATION CARD (hidden until submit) -->
+  <div class="card" id="escalation-confirm">
+    <div class="card-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="confirm-icon pass" id="confirmIcon">✓</div>
+        <h2 id="confirmTitle">Validation passed — escalation submitted</h2>
+      </div>
+      <span class="badge badge-esc-fee">PNP024</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Validation results</div>
+      <div id="val-results"></div>
+      <div class="pend-bar">
+        <span style="font-size:15px;">⏸</span>
+        <span id="pendBarText"></span>
+      </div>
+      <div class="esc-box">
+        <label>Escalation detail string (Req 5A) — generated and stored</label>
+        <div class="esc-string" id="esc-string"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="what-next" id="what-next"></div>
+      <div style="margin-top:16px;">
+        <button class="btn-secondary" onclick="resetDemo()">← Back to retrieval target</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ESCALATION FORM MODAL -->
+<div class="modal-overlay" id="escModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Fee Approval Escalation — PNP024</div>
+    </div>
+    <div class="modal-body">
+
+      <div class="fee-ref">
+        <div class="fee-ref-lbl">Escalating</div>
+        <div class="fee-ref-val">1 chart: RT-2026-88341</div>
+      </div>
+      <div class="fee-ref">
+        <div class="fee-ref-lbl">Fee schedule</div>
+        <div class="fee-ref-val" id="feeRefVal"></div>
+      </div>
+
+      <div class="section-label">Vendor &amp; payment timing — applies to this entire escalation</div>
+      <div class="frb">
+        <div class="row-fields">
+          <div class="ff">
+            <label>Vendor <span class="req-mark">*</span></label>
+            <div class="rg">
+              <div class="rb on" id="v-prov" onclick="setV('prov')">Provider</div>
+              <div class="rb" id="v-hih" onclick="setV('hih')">HIH</div>
+            </div>
+            <div class="vname-wrap" id="vn-wrap">
+              <div id="vendorNameCell"></div>
+            </div>
+          </div>
+          <div class="ff">
+            <label>Payment Timing <span class="req-mark">*</span></label>
+            <div class="rg">
+              <div class="rb on" id="pt-pre" onclick="setPT('pre')">Pre+Post</div>
+              <div class="rb" id="pt-post" onclick="setPT('post')">Postpay</div>
+            </div>
+            <div class="vendor-fee-badge" id="vendorFeeBadge"></div>
+          </div>
+        </div>
+        <div class="carveout-alert" id="carveoutAlert">
+          Review the client fee details to determine whether this vendor has a carveout rate before submitting.
+        </div>
+      </div>
+
+      <div class="section-label">Fee rows — enter an amount for at least one row</div>
+
+      <div class="frb">
+        <div class="row-fields">
+          <div class="ff">
+            <label>$ Amount</label>
+            <input type="number" id="r1amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(1)" onchange="updateHint(1)"/>
+            <div class="amt-hint" id="r1hint"></div>
+          </div>
+          <div class="ff">
+            <label>Fee Type <span class="req-mark">*</span></label>
+            <div class="rg">
+              <div class="rb on" id="r1ft-chart" onclick="setFT(1,'chart')">Per Chart</div>
+              <div class="rb" id="r1ft-page" onclick="setFT(1,'page')">Per Page</div>
+            </div>
+          </div>
+          <div class="ff">
+            <label>$ Amount</label>
+            <input type="number" id="r2amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(2)" onchange="updateHint(2)"/>
+            <div class="amt-hint" id="r2hint"></div>
+          </div>
+          <div class="ff">
+            <label>Fee Type</label>
+            <div class="rg">
+              <div class="rb on">CNA Fee</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes-wrap" style="margin-top:18px;">
+        <label class="note-lbl">Agent note <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <textarea id="agent-note" placeholder="Add a note if needed..." oninput="onAgentNoteInput()"></textarea>
+      </div>
+
+      <div class="esc-preview">
+        <label>Escalation statement — this is what the client will see in Chart Compass</label>
+        <div class="esc-preview-text" id="escPreviewText"></div>
+      </div>
+
+      <div class="submit-err" id="submit-err"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEscalationModal()">Go Back</button>
+      <button class="btn-primary" id="submitEscBtn" onclick="submitEsc()">Submit Escalation</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Fee schedule (order-level) ───────────────────────────────────────────
+const FEE_SCHEDULE_STRING = 'Prov+HIH Pre+Postpay $35, CNA $10 | Verisma $50, CNA $15 | Not approved for MRO';
+document.getElementById('feeScheduleString').textContent = FEE_SCHEDULE_STRING;
+document.getElementById('feeRefVal').textContent = FEE_SCHEDULE_STRING;
+
+const SCHEDULE = {
+  'prov|pre|chart': 35, 'prov|post|chart': 35, 'prov|pre|cna': 10, 'prov|post|cna': 10,
+  'hih|pre|chart':  35, 'hih|post|chart':  35, 'hih|pre|cna':  10, 'hih|post|cna':  10,
+};
+
+// Full structured list of HIH vendors an agent can search and pick from. "Other…" is always
+// appended to the combo list separately (see renderVendorComboList) — choosing it, or typing
+// a name that matches nothing here, drops into free-text entry.
+const VENDOR_LIST = [
+  'Advantmed', 'Al Imaging', 'AMS', 'Better Instant', 'BHS', 'Care Consultants', 'Chartpro',
+  'Chartrequest', 'CHM', 'Copy Cat', 'Copy Mate', 'Copy Med', 'Data Dimensions', 'Datafied',
+  'Datalink', 'Diversified DMRS', 'Document Access', 'GRM', 'Gulf Coast', 'Healthcare Technologies',
+  'Healthmark', 'HIMQS', 'IBS', 'Iron Mtn', 'Lexa', 'Medical Docs', 'Medical Records Now', 'Medicopy',
+  'Medrec', 'Medrecs', 'MMRA', 'Morgan Records', 'Mr P Copy', 'MRO', 'Noble', 'Recordconnect',
+  'Recordquest', 'Scanstat', 'Scanning Sherpas', 'Sharecare', 'Summit Retrieval',
+  'Total Document Access', 'Verisma', 'VRC', 'Westside Medical',
+];
+
+// Structured, vendor-specific fee schedule entries. Because vendor name is now captured as
+// structured data (picked from the list, not free text), validation can match it directly
+// instead of just flagging "go check manually." Any listed vendor without its own entry here
+// falls back to the general HIH rate. MRO is "not approved for any fee" — modeled as an
+// approved rate of $0, so any amount requested exceeds it and correctly requires escalation.
+const VENDOR_RATES = {
+  'Verisma': { chart: 50, cna: 15 },
+  'MRO': { chart: 0, cna: 0 },
+};
+
+// Vendor, name, timing, and amount are all entered fresh by the agent — there is no
+// upstream invoice record to pull them from (unlike the HubPay version of this flow).
+// vendorOther is true once the agent has switched to manual (free-text) entry.
+const ESC = { v: 'prov', pt: 'pre', vendorName: '', vendorOther: false };
+const R = {
+  1: { ft: 'chart' },
+  2: { ft: 'cna' },
+};
+
+function escapeAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function fmt(n) {
+  const f = parseFloat(n);
+  if (isNaN(f) || f === 0) return '$0';
+  return '$' + (Number.isInteger(f) ? f : f.toFixed(2));
+}
+function ftLabel(ft) { return ft==='chart' ? 'per chart' : ft==='page' ? 'per page' : 'CNA fee'; }
+function vLabel() {
+  return ESC.v === 'prov' ? 'Provider' : (ESC.vendorName || 'HIH');
+}
+function ptLabel(pt) { return pt === 'post' ? 'Postpay' : 'Pre+Post'; }
+function timingPhrase(pt) { return pt === 'post' ? 'Postpay' : 'Prepay or Postpay'; }
+function vendorRate(ft) {
+  if (VENDOR_RATES[ESC.vendorName]) {
+    const v = VENDOR_RATES[ESC.vendorName];
+    return (v[ft] !== undefined) ? v[ft] : null;
+  }
+  const key = 'hih|'+ESC.pt+'|'+ft;
+  return (key in SCHEDULE) ? SCHEDULE[key] : null;
+}
+function lookupApproved(ft) {
+  if (ESC.v === 'hih' && !ESC.vendorOther && ESC.vendorName) {
+    return vendorRate(ft);
+  }
+  const key = ESC.v+'|'+ESC.pt+'|'+ft;
+  return (key in SCHEDULE) ? SCHEDULE[key] : null;
+}
+function updateCarveoutAlert() {
+  // Only show when the vendor was free-typed (no structured match) — a known list pick or
+  // Provider already has a confident rate, so there's nothing to manually double-check.
+  const show = ESC.v === 'hih' && ESC.vendorOther && !!ESC.vendorName;
+  document.getElementById('carveoutAlert').classList.toggle('show', show);
+}
+function updateVendorFeeBadge() {
+  const badge = document.getElementById('vendorFeeBadge');
+  if (ESC.v !== 'hih' || ESC.vendorOther || !ESC.vendorName) {
+    badge.textContent = '';
+    return;
+  }
+  const chart = vendorRate('chart');
+  const cna = vendorRate('cna');
+  if (chart === 0 && cna === 0) {
+    badge.textContent = '$0';
+  } else {
+    const timing = ESC.pt === 'post' ? 'Postpay' : 'Pre+Postpay';
+    badge.textContent = `${timing} ${chart !== null ? fmt(chart) : '—'}, CNA ${cna !== null ? fmt(cna) : '—'}`;
+  }
+}
+
+// ── Vendor Name searchable combobox — mirrors the PPT Fee Schedule prototype exactly:
+// a "Type to search…" box lists matches live, "Other…" always sits at the bottom of the
+// list, and choosing it swaps in a plain text field with a "Use list instead" link back.
+function vendorNameCellHtml() {
+  if (ESC.vendorOther) {
+    return `
+      <div class="vendor-combo">
+        <input type="text" id="vnameManual" value="${escapeAttr(ESC.vendorName)}" placeholder="Enter vendor name">
+        <button type="button" class="link-btn" onclick="vendorUseListInstead()">Use list instead</button>
+      </div>`;
+  }
+  return `
+    <div class="vendor-combo">
+      <input type="text" autocomplete="off" id="vnameSearch" class="${ESC.vendorName ? 'has-clear' : ''}"
+             value="${escapeAttr(ESC.vendorName)}" placeholder="Type to search…">
+      ${ESC.vendorName ? `<button type="button" class="vendor-clear-btn" onclick="vendorNameClear()" title="Clear vendor">×</button>` : ''}
+      <ul class="vendor-combo-list hidden" id="vendorComboList"></ul>
+    </div>`;
+}
+function renderVendorField() {
+  document.getElementById('vendorNameCell').innerHTML = vendorNameCellHtml();
+  attachVendorFieldListeners();
+  updateVendorFeeBadge();
+  updateCarveoutAlert();
+  updateHint(1);
+  updateHint(2);
+  refreshPreview();
+  refreshSubmitState();
+}
+function attachVendorFieldListeners() {
+  if (ESC.vendorOther) {
+    const inp = document.getElementById('vnameManual');
+    inp.addEventListener('input', () => {
+      ESC.vendorName = inp.value;
+      updateCarveoutAlert();
+      updateHint(1);
+      updateHint(2);
+      refreshPreview();
+      refreshSubmitState();
+    });
+    return;
+  }
+  const inp = document.getElementById('vnameSearch');
+  inp.addEventListener('focus', openVendorCombo);
+  inp.addEventListener('input', renderVendorComboList);
+  inp.addEventListener('blur', () => {
+    setTimeout(() => {
+      closeVendorCombo();
+      inp.value = ESC.vendorName;
+    }, 150);
+  });
+  inp.addEventListener('keydown', handleVendorComboKeydown);
+}
+function filterVendorNames(query) {
+  const q = query.trim().toLowerCase();
+  return q ? VENDOR_LIST.filter(n => n.toLowerCase().includes(q)) : VENDOR_LIST.slice();
+}
+function renderVendorComboList() {
+  const listEl = document.getElementById('vendorComboList');
+  const inputEl = document.getElementById('vnameSearch');
+  if (!listEl || !inputEl) return;
+  const matches = filterVendorNames(inputEl.value);
+  const itemsHtml = matches.map(n => `<li data-value="${escapeAttr(n)}">${escapeHtml(n)}</li>`).join('');
+  const noMatchHtml = matches.length === 0 ? `<li class="no-match">No matches</li>` : '';
+  listEl.innerHTML = itemsHtml + noMatchHtml + `<li class="other-option" data-value="__other__">Other…</li>`;
+  listEl.querySelectorAll('li[data-value]').forEach(li => {
+    li.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectVendorName(li.dataset.value);
+    });
+  });
+}
+function openVendorCombo() {
+  renderVendorComboList();
+  document.getElementById('vendorComboList').classList.remove('hidden');
+}
+function closeVendorCombo() {
+  const el = document.getElementById('vendorComboList');
+  if (el) el.classList.add('hidden');
+}
+function moveVendorComboHighlight(delta) {
+  const listEl = document.getElementById('vendorComboList');
+  if (!listEl) return;
+  const items = Array.from(listEl.querySelectorAll('li[data-value]'));
+  if (!items.length) return;
+  const currentIndex = items.findIndex(li => li.classList.contains('active'));
+  let nextIndex = currentIndex + delta;
+  if (nextIndex < 0) nextIndex = items.length - 1;
+  if (nextIndex >= items.length) nextIndex = 0;
+  items.forEach(li => li.classList.remove('active'));
+  items[nextIndex].classList.add('active');
+  items[nextIndex].scrollIntoView({ block: 'nearest' });
+}
+function handleVendorComboKeydown(e) {
+  if (e.key === 'Escape') { e.target.blur(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    moveVendorComboHighlight(e.key === 'ArrowDown' ? 1 : -1);
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const listEl = document.getElementById('vendorComboList');
+    if (!listEl) return;
+    const active = listEl.querySelector('li.active[data-value]') || listEl.querySelector('li[data-value]');
+    if (active) selectVendorName(active.dataset.value);
+  }
+}
+function selectVendorName(value) {
+  if (value === '__other__') {
+    ESC.vendorOther = true;
+    ESC.vendorName = '';
+  } else {
+    ESC.vendorName = value;
+  }
+  renderVendorField();
+  if (value === '__other__') {
+    const manualInput = document.getElementById('vnameManual');
+    if (manualInput) manualInput.focus();
+  }
+}
+function vendorUseListInstead() {
+  ESC.vendorOther = false;
+  ESC.vendorName = '';
+  renderVendorField();
+}
+function vendorNameClear() {
+  ESC.vendorName = '';
+  renderVendorField();
+  const inp = document.getElementById('vnameSearch');
+  if (inp) inp.focus();
+}
+
+// ── Fee expand ────────────────────────────────────────────────────────────
+function toggleFee() {
+  const open = document.getElementById('feePanel').classList.toggle('open');
+  document.getElementById('feeHint').textContent = open ? 'Hide ▴' : 'View full fee detail string ▾';
+}
+
+// ── Escalation form modal ────────────────────────────────────────────────
+function resetEscForm() {
+  R[1].ft = 'chart';
+  ESC.v = 'prov'; ESC.pt = 'pre';
+  document.getElementById('r1amt').value = '';
+  document.getElementById('r2amt').value = '';
+  document.getElementById('agent-note').value = '';
+  document.getElementById('submit-err').classList.remove('show');
+  [1,2].forEach(r => {
+    const h = document.getElementById('r'+r+'hint');
+    h.className = 'amt-hint'; h.textContent = '';
+    document.getElementById('r'+r+'amt').classList.remove('warn','good','err');
+  });
+  ['chart','page'].forEach(o => document.getElementById('r1ft-'+o).classList.toggle('on', o==='chart'));
+  ['prov','hih'].forEach(o => document.getElementById('v-'+o).classList.toggle('on', o==='prov'));
+  ['pre','post'].forEach(o => document.getElementById('pt-'+o).classList.toggle('on', o==='pre'));
+  document.getElementById('vn-wrap').classList.remove('show');
+  ESC.vendorOther = false;
+  ESC.vendorName = '';
+  renderVendorField();
+  refreshPreview();
+  refreshSubmitState();
+}
+function openEscalationModal() {
+  resetEscForm();
+  document.getElementById('escModal').classList.add('open');
+}
+function closeEscalationModal() { document.getElementById('escModal').classList.remove('open'); }
+
+// ── Radios ────────────────────────────────────────────────────────────────
+function setFT(row, val) {
+  ['chart','page'].forEach(o => document.getElementById('r'+row+'ft-'+o).classList.toggle('on', o===val));
+  R[row].ft = val;
+  updateHint(row);
+}
+function setV(val) {
+  ['prov','hih'].forEach(o => document.getElementById('v-'+o).classList.toggle('on', o===val));
+  ESC.v = val;
+  document.getElementById('vn-wrap').classList.toggle('show', val==='hih');
+  if (val !== 'hih') {
+    ESC.vendorOther = false;
+    ESC.vendorName = '';
+    renderVendorField();
+  } else {
+    updateCarveoutAlert();
+    updateVendorFeeBadge();
+    updateHint(1);
+    updateHint(2);
+  }
+}
+function setPT(val) {
+  ['pre','post'].forEach(o => document.getElementById('pt-'+o).classList.toggle('on', o===val));
+  ESC.pt = val;
+  updateVendorFeeBadge();
+  updateHint(1);
+  updateHint(2);
+}
+function onAgentNoteInput() {
+  refreshPreview();
+}
+
+// ── Inline amount hint ────────────────────────────────────────────────────
+function updateHint(row) {
+  const input    = document.getElementById('r'+row+'amt');
+  const hint     = document.getElementById('r'+row+'hint');
+  const amt      = parseFloat(input.value);
+  const approved = lookupApproved(R[row].ft);
+
+  input.classList.remove('warn','good','err');
+  hint.className = 'amt-hint';
+  hint.textContent = '';
+
+  if (!isNaN(amt) && input.value !== '') {
+    if (approved === null) {
+      hint.className = 'amt-hint h-skip show';
+      hint.textContent = 'No approved rate for this combination';
+    } else if (amt > approved) {
+      input.classList.add('good');
+      hint.className = 'amt-hint h-good show';
+      hint.textContent = `✓ Exceeds approved ${fmt(approved)} — valid escalation.`;
+    } else {
+      input.classList.add('warn');
+      hint.className = 'amt-hint h-warn show';
+      const rel = amt === approved ? 'equals' : 'does not exceed';
+      hint.textContent = `⚠ ${fmt(amt)} ${rel} the approved ${fmt(approved)}`;
+    }
+  }
+  refreshPreview();
+  refreshSubmitState();
+}
+
+// ── Escalation statement preview (Requirement 5A) ─────────────────────────
+function buildEscString() {
+  const rows = filledRows();
+  if (!rows.length) return '';
+  const note = document.getElementById('agent-note').value.trim();
+  let str;
+  if (rows.includes(1)) {
+    const r1amt = parseFloat(document.getElementById('r1amt').value) || 0;
+    str = `${vLabel()} requests ${timingPhrase(ESC.pt)}, ${fmt(r1amt)} ${ftLabel(R[1].ft)}`;
+    if (rows.includes(2)) {
+      const r2amt = parseFloat(document.getElementById('r2amt').value) || 0;
+      str += `, ${fmt(r2amt)} CNA`;
+    }
+    str += '.';
+  } else {
+    const r2amt = parseFloat(document.getElementById('r2amt').value) || 0;
+    str = `${vLabel()} requests ${timingPhrase(ESC.pt)}, ${fmt(r2amt)} CNA.`;
+  }
+  if (note) str += ` ${note}`;
+  return str;
+}
+function refreshPreview() {
+  const el = document.getElementById('escPreviewText');
+  if (!el) return;
+  el.textContent = buildEscString() || 'Enter an amount for at least one row to preview the escalation statement.';
+}
+
+// ── Row-level validation ──────────────────────────────────────────────────
+// ── Row-level validation (Requirement 7) ───────────────────────────────────
+// A row is submittable if it has no comparable rate in the fee schedule (e.g. the
+// schedule only has a Per Chart rate and the agent picked Per Page), or if the
+// amount requested exceeds the approved rate. The escalation as a whole can be
+// submitted as long as at least one filled row meets one of those conditions.
+function filledRows() {
+  return [1,2].filter(r => {
+    const v = document.getElementById('r'+r+'amt').value;
+    return v !== '' && !isNaN(parseFloat(v));
+  });
+}
+function rowIsSubmittable(r) {
+  const amt      = parseFloat(document.getElementById('r'+r+'amt').value);
+  const approved = lookupApproved(R[r].ft);
+  return approved === null || amt > approved;
+}
+function canSubmit() {
+  const rows = filledRows();
+  return rows.length > 0 && rows.some(rowIsSubmittable);
+}
+function refreshSubmitState() {
+  const btn = document.getElementById('submitEscBtn');
+  const errEl = document.getElementById('submit-err');
+  const rows = filledRows();
+  if (rows.length === 0) {
+    btn.disabled = true;
+    errEl.classList.remove('show');
+    return;
+  }
+  const ok = rows.some(rowIsSubmittable);
+  btn.disabled = !ok;
+  if (ok) {
+    errEl.classList.remove('show');
+  } else {
+    errEl.textContent = 'None of the amounts entered exceed the client-approved rate for this vendor — this escalation cannot be submitted.';
+    errEl.classList.add('show');
+  }
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────
+function submitEsc() {
+  const errEl = document.getElementById('submit-err');
+  errEl.classList.remove('show');
+
+  if (ESC.v === 'hih' && !ESC.vendorName.trim()) {
+    errEl.textContent = 'Vendor name is required when Vendor = HIH.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  if (!canSubmit()) { refreshSubmitState(); return; }
+
+  finalizeEscalation();
+}
+
+function finalizeEscalation() {
+  closeEscalationModal();
+  buildConfirmation();
+  document.getElementById('rt-card').style.display = 'none';
+  document.getElementById('escalation-confirm').style.display = 'block';
+}
+
+// ── Build confirmation card ────────────────────────────────────────────────
+function buildConfirmation() {
+  const rows = filledRows();
+  let html = '';
+
+  rows.forEach(r => {
+    const amt      = parseFloat(document.getElementById('r'+r+'amt').value) || 0;
+    const approved = lookupApproved(R[r].ft);
+    const vl       = vLabel();
+    const ptl      = ptLabel(ESC.pt);
+    const ftl      = ftLabel(R[r].ft);
+    let cls, iconCls, iconChar, small, compHtml;
+
+    if (approved === null) {
+      cls='skip'; iconCls='skip'; iconChar='—';
+      small = 'No matching fee schedule entry — validation skipped.';
+      compHtml = `<div class="appr" style="color:#94a3b8;">No approved rate</div>`;
+    } else if (amt <= approved) {
+      cls='skip'; iconCls='skip'; iconChar='—';
+      small = 'Did not exceed approved rate — not counted toward validation.';
+      compHtml = `<div class="req">Requested ${fmt(amt)}</div><div class="appr">Approved ${fmt(approved)}</div>`;
+    } else {
+      cls='pass'; iconCls='pass'; iconChar='✓';
+      small = 'Requested amount exceeds approved rate. Escalation valid.';
+      compHtml = `<div class="req">Requested ${fmt(amt)}</div><div class="appr">Approved ${fmt(approved)}</div><div class="gt">${fmt(amt)} &gt; ${fmt(approved)} ✓</div>`;
+    }
+
+    html += `<div class="val-row ${cls}">
+      <div class="val-left">
+        <div class="val-icon ${iconCls}">${iconChar}</div>
+        <div class="val-desc">${ftl.charAt(0).toUpperCase()+ftl.slice(1)} — ${vl}, ${ptl}<small>${small}</small></div>
+      </div>
+      <div class="val-comp">${compHtml}</div>
+    </div>`;
+  });
+
+  document.getElementById('val-results').innerHTML = html;
+
+  document.getElementById('pendBarText').textContent =
+    'PNP024 applied to RT-2026-88341. Escalation routed to Hub → Routing → Chart Compass for client review.';
+
+  document.getElementById('esc-string').textContent = buildEscString();
+
+  document.getElementById('what-next').innerHTML =
+    '<strong>What happens next:</strong> The escalation detail string and structured fee data are sent to Chart Compass via Hub and Routing. The client will see this alongside the order fee schedule and can Approve, Edit, or Decline. Their response will return to this retrieval target.';
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────
+function resetDemo() {
+  document.getElementById('escalation-confirm').style.display = 'none';
+  document.getElementById('rt-card').style.display = 'block';
+}
+</script>
+
+</body>
+</html>

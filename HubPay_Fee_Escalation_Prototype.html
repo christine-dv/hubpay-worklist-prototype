@@ -51,7 +51,7 @@
 
   /* ── MAIN CONTENT ── */
   #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  .page-inner { flex: 1; overflow-y: auto; padding: 24px 28px; max-width: 900px; }
+  .page-inner { flex: 1; overflow-y: auto; padding: 24px 28px; max-width: 1100px; }
   .page-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
   .page-subtitle { font-size: 13px; color: #64748b; margin-bottom: 18px; }
 
@@ -65,15 +65,24 @@
   .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
   .card-header {
     padding: 12px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; cursor: default;
   }
+  .card-header.collapsible { cursor: pointer; user-select: none; }
   .card-header h2 { font-size: 14px; font-weight: 700; color: #0f172a; }
+  .card-header .chev { color: #94a3b8; font-size: 11px; margin-left: 8px; }
   .card-body { padding: 18px; }
+  .card-body.tight { padding: 14px 18px; }
 
   .field-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px 24px; margin-bottom: 4px; }
   .field label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
   .field .value { font-size: 13px; color: #1e293b; }
   .field .value.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #475569; }
+  .field input[type="text"], .field input[type="date"] {
+    width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 7px 9px;
+    font-size: 13px; color: #1e293b; outline: none;
+  }
+  .field input[disabled] { color: #94a3b8; background: #f8fafc; }
+  .req-star { color: #dc2626; }
 
   /* ── FEE DETAIL STRING ── */
   .fee-bar { border-top: 1px solid #f1f5f9; margin-top: 16px; padding-top: 14px; }
@@ -103,6 +112,8 @@
     font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
   }
   .btn-secondary:hover { background: #f9fafb; }
+  .btn-secondary:disabled { color: #cbd5e1; cursor: not-allowed; }
+  .btn-secondary:disabled:hover { background: #fff; }
   .btn-escalate {
     background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 8px 16px; border-radius: 6px;
     font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
@@ -116,11 +127,72 @@
   .btn-rm { background: none; border: none; font-size: 12px; color: #94a3b8; cursor: pointer; padding: 0; }
   .btn-rm:hover { color: #dc2626; }
 
+  /* ── ACTIONS DROPDOWN ── */
+  .actions-wrap { position: relative; display: inline-block; }
+  .btn-actions {
+    background: #fff; color: #374151; border: 1px solid #d1d5db; padding: 7px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-actions:hover { background: #f9fafb; }
+  .actions-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 6px 20px rgba(15,23,42,0.12);
+    min-width: 190px; z-index: 50; overflow: hidden;
+  }
+  .actions-menu.open { display: block; }
+  .actions-menu button {
+    display: block; width: 100%; text-align: left; background: none; border: none; padding: 9px 14px;
+    font-size: 13px; color: #1e293b; cursor: pointer;
+  }
+  .actions-menu button:hover { background: #f1f5f9; }
+  .actions-menu button:disabled { color: #cbd5e1; cursor: not-allowed; }
+  .actions-menu button:disabled:hover { background: none; }
+
   /* ── BADGES ── */
   .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
   .badge-esc-fee { background: #fef3c7; color: #d97706; }
   .badge-pass { background: #dcfce7; color: #16a34a; }
   .badge-override { background: #fef3c7; color: #d97706; }
+  .status-pill { display: inline-flex; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+  .status-pill.requested { background: #f1f5f9; color: #475569; }
+  .status-pill.paid { background: #dcfce7; color: #16a34a; }
+  .status-pill.escalated { background: #fef3c7; color: #b45309; }
+
+  /* ── LINE ITEMS TABLE ── */
+  .tbl-scroll { overflow-x: auto; border-top: 1px solid #e2e8f0; }
+  table.li-table { width: 100%; border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
+  table.li-table th {
+    text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    color: #64748b; padding: 9px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+  }
+  table.li-table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+  table.li-table tr.selected td { background: #eff6ff; }
+  table.li-table input[type="number"].amt-cell {
+    width: 68px; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 6px; font-size: 12.5px;
+  }
+  .mono-cell { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11.5px; color: #475569; }
+  .row-chk[disabled] { opacity: 0.4; }
+
+  /* ── RECORD SEARCH (static, decorative) ── */
+  .rs-actions-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .rs-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .rs-filter-pill {
+    border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #374151;
+    background: #fff; display: inline-flex; align-items: center; gap: 4px; cursor: default;
+  }
+  .rs-search-row { display: flex; gap: 10px; }
+  .rs-search-row input {
+    flex: 1; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #1e293b;
+  }
+
+  /* ── ATTACHMENTS (static) ── */
+  .doctype-row { display: flex; gap: 18px; margin-bottom: 12px; align-items: center; }
+  .doctype-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; }
+  table.att-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
+  table.att-table th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #64748b; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+  table.att-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+  .upload-status { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .fine-print { font-size: 11px; color: #94a3b8; margin-top: 4px; }
 
   /* ── MODAL ── */
   .modal-overlay {
@@ -132,6 +204,8 @@
   .modal.modal-sm { max-width: 440px; }
   .modal-head { padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
   .modal-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .modal-close { background: none; border: none; font-size: 15px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px; }
+  .modal-close:hover { color: #475569; }
   .modal-body { padding: 20px 24px; overflow-y: auto; }
   .modal-body p { font-size: 13px; color: #475569; line-height: 1.5; }
   .modal-actions { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end; }
@@ -141,6 +215,7 @@
     margin-bottom: 18px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
   }
   .fee-ref-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; flex-shrink: 0; margin-top: 1px; }
+  .info-icon { cursor: help; font-size: 11px; color: #1d4ed8; text-transform: none; letter-spacing: 0; }
   .fee-ref-val { font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; color: #1d4ed8; }
 
   .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 10px; }
@@ -156,10 +231,17 @@
     width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 10px;
     font-size: 13px; color: #1e293b; outline: none; transition: border-color .15s, background .15s;
   }
-  .ff input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  .ff select {
+    width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; color: #1e293b; outline: none; appearance: none;
+  }
+  .ff input:focus, .ff select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+  .ff input.amt-locked { background: #f8fafc; color: #64748b; cursor: not-allowed; }
   .ff input.warn { border-color: #f59e0b; background: #fffbeb; }
   .ff input.good { border-color: #16a34a; background: #f0fdf4; }
   .ff input.err { border-color: #dc2626; background: #fef2f2; }
+
+  .chk-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #1e293b; cursor: pointer; }
 
   .amt-hint { font-size: 11px; margin-top: 6px; min-height: 16px; line-height: 1.4; display: none; }
   .amt-hint.show { display: block; }
@@ -191,21 +273,19 @@
     font-size: 13px; color: #1e293b; outline: none; resize: none; height: 60px; font-family: inherit; transition: border-color .15s;
   }
   .notes-wrap textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
-  .notes-wrap textarea.req { border-color: #f59e0b; background: #fffbeb; }
   .note-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; display: block; }
-  .note-req-hint { font-size: 11px; color: #d97706; margin-top: 5px; display: none; }
-  .note-req-hint.show { display: block; }
   .hint-static { font-size: 11px; color: #94a3b8; margin-top: 6px; margin-bottom: 10px; }
   .submit-err { font-size: 12px; color: #dc2626; margin-top: 10px; display: none; }
   .submit-err.show { display: block; }
 
-  /* ── WARNING MODAL ── */
-  .warn-icon { width: 34px; height: 34px; border-radius: 50%; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .esc-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-top: 18px; }
+  .esc-preview label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 8px; }
+  .esc-preview-text { font-size: 13px; color: #1e293b; line-height: 1.6; }
 
-  /* ── CONFIRMATION CARD ── */
+  /* ── ESCALATION CONFIRMATION BANNER ── */
+  #escBanner { display: none; border-top: 1px solid #e2e8f0; background: #fafcff; }
   .confirm-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
   .confirm-icon.pass { background: #dcfce7; color: #16a34a; }
-  .confirm-icon.override { background: #fef3c7; color: #d97706; }
   .pend-bar {
     background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px;
     margin-top: 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #92400e;
@@ -231,8 +311,6 @@
   .val-comp .ov { color: #d97706; font-size: 10px; }
   .what-next { font-size: 12px; color: #64748b; line-height: 1.8; margin-top: 16px; }
   .divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
-
-  #escalation-confirm { display: none; }
 </style>
 </head>
 <body>
@@ -269,40 +347,44 @@
     <div id="sidebar-title">HubPay</div>
     <span id="prototype-badge">Prototype</span>
   </div>
-  <div class="nav-group-label">Fee Visibility &amp; Validation</div>
-  <button class="nav-item active">Invoice Line Item</button>
+  <div class="nav-group-label">HubPay</div>
+  <button class="nav-item active">Invoices</button>
+  <button class="nav-item" onclick="alert('Prototype only — not wired up.')">Invoice Line Items</button>
+  <button class="nav-item" onclick="alert('Prototype only — not wired up.')">Record Search</button>
+  <button class="nav-item" onclick="alert('Prototype only — not wired up.')">Upload History</button>
+  <button class="nav-item" onclick="alert('Prototype only — not wired up.')">Invoice Locks</button>
   <hr class="nav-separator">
   <div class="nav-group-label">Scope</div>
   <div style="padding:0 16px 12px;color:#64748b;font-size:11.5px;line-height:1.7;">
-    Demonstrates Requirements 5, 5A &amp; 7 from the 2026-06-09 PPT Fee Visibility &amp; Validation PRD — the structured PNP024 escalation form, fee validation at point of escalation, and the generated escalation detail string, as they'd appear in HubPay.
+    Demonstrates Requirements 5, 5A &amp; 7 from the 2026-06-09 PPT Fee Visibility &amp; Validation PRD, starting from the real HubPay invoice screen: select line items → Actions → Set Payment Status → Escalated / Outside Payment Terms → structured PNP024 escalation form with fee validation and generated escalation detail string.
   </div>
   <div id="sidebar-spacer"></div>
+  <button class="nav-item" style="border-top:1px solid #2d3f57;">↩ Logout</button>
 </nav>
 
 <!-- MAIN -->
 <div id="main">
   <div class="page-inner">
-    <div class="page-title">Invoice Line Item</div>
-    <div class="page-subtitle">HubPay — reviewing an invoice line item that requires fee approval</div>
+    <div class="page-title">Invoice — 30108610032006292026164945</div>
+    <div class="page-subtitle">HubPay — reviewing a Verisma invoice</div>
 
     <div class="demo-banner">
-      ⓘ Interactive prototype — enter a $ Amount in the escalation form to see validation behave against the order's fee schedule.
+      ⓘ Interactive prototype — select one or more requested line items below, then <strong>Actions → Set Payment Status → Escalated → Outside Payment Terms</strong> to start the PNP024 escalation flow.
     </div>
 
-    <!-- LINE ITEM CARD -->
-    <div class="card" id="line-item-card">
+    <!-- INVOICE HEADER CARD -->
+    <div class="card">
       <div class="card-header">
-        <h2>Invoice Line Item — RT-2026-88341</h2>
-        <span class="badge badge-esc-fee">Fee Review Needed</span>
+        <h2>Invoice Detail</h2>
       </div>
       <div class="card-body">
         <div class="field-grid">
           <div class="field"><label>Vendor</label><div class="value">Verisma</div></div>
           <div class="field"><label>Vendor Type</label><div class="value">HIH</div></div>
           <div class="field"><label>Project</label><div class="value">Centene ACA 2026</div></div>
-          <div class="field"><label>Vendor Invoice Number</label><div class="value mono">30108610032006292026164945</div></div>
-          <div class="field"><label>Requested Amount</label><div class="value" style="font-weight:700;">$65.00</div></div>
           <div class="field"><label>Payment Method</label><div class="value">ACH</div></div>
+          <div class="field"><label><span class="req-star">*</span> Received Date</label><input type="date" value="2026-07-02" disabled></div>
+          <div class="field"><label>Remit-To Address</label><input type="text" value="65612_308879" disabled></div>
         </div>
 
         <div class="fee-bar">
@@ -313,44 +395,200 @@
           </div>
           <div class="fee-full-panel" id="feePanel">
             <div class="fee-string" id="feeScheduleString"></div>
-            <div class="fee-caption">Approved for Provider and General HIH, pre- and postpay, $35/chart, CNA $10. Verisma is a named HIH carveout at $50/chart, CNA $15. Ciox Health is excluded — not approved for any fee.</div>
+            <div class="fee-caption">Approved for Provider and General HIH, pre- and postpay, $35/chart, CNA $10. Verisma is a named HIH carveout at $50/chart, CNA $15. MRO is excluded — not approved for any fee.</div>
           </div>
         </div>
       </div>
       <div class="card-actions">
-        <button class="btn-escalate" onclick="openEscalationModal()">Escalate for Fee Approval (PNP024)</button>
-        <button class="btn-secondary" onclick="alert('Prototype only — not wired up.')">Deny Invoice</button>
+        <button class="btn-secondary" onclick="alert('Prototype only — not wired up.')">Cancel</button>
+        <button class="btn-primary" onclick="alert('Prototype only — not wired up.')">Save</button>
       </div>
     </div>
 
-    <!-- ESCALATION CONFIRMATION CARD (hidden until submit) -->
-    <div class="card" id="escalation-confirm">
-      <div class="card-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="confirm-icon pass" id="confirmIcon">✓</div>
-          <h2 id="confirmTitle">Validation passed — escalation submitted</h2>
-        </div>
-        <span class="badge badge-esc-fee">PNP024</span>
+    <!-- ATTACHMENTS CARD -->
+    <div class="card">
+      <div class="card-header collapsible" onclick="toggleCard('attachBody','attachChev')">
+        <h2>Attachments <span class="chev" id="attachChev">▾</span></h2>
       </div>
-      <div class="card-body">
-        <div class="section-label">Validation results</div>
-        <div id="val-results"></div>
-        <div class="pend-bar">
-          <span style="font-size:15px;">⏸</span>
-          PNP024 applied to RT-2026-88341. Escalation routed to Hub → Routing → Chart Compass for client review.
+      <div class="card-body" id="attachBody">
+        <div class="doctype-row">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Document Type (select all that apply)</span>
         </div>
-        <div class="esc-box">
-          <label>Escalation detail string (Req 5A) — generated and stored</label>
-          <div class="esc-string" id="esc-string"></div>
+        <div class="doctype-row">
+          <label><input type="checkbox" checked disabled> Invoice</label>
+          <label><input type="checkbox" disabled> Remittance File</label>
+          <label><input type="checkbox" disabled> W9</label>
+          <label><input type="checkbox" disabled> Other</label>
         </div>
-        <div class="divider"></div>
-        <div class="what-next" id="what-next"></div>
-        <div style="margin-top:16px;">
-          <button class="btn-secondary" onclick="resetDemo()">← Back to line item</button>
+        <button class="btn-secondary" onclick="alert('Prototype only — not wired up.')">+ New Attachment</button>
+        <div class="fine-print">Accepted: PDF, CSV; max 100 MB. Save your changes first — the page reloads after a successful upload.</div>
+        <table class="att-table">
+          <thead><tr><th></th><th>File Name</th><th>Document Type</th><th>Upload Status</th><th>Uploaded By</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr><td>…</td><td>Invoice 6158385.pdf</td><td>INVOICE</td><td><span class="upload-status">Complete</span></td><td>christine.buchanan.finance@datavant.com</td><td>7/2/2026, 10:30:31 PM</td></tr>
+            <tr><td>…</td><td>Invoice 615781.pdf</td><td>INVOICE</td><td><span class="upload-status">Complete</span></td><td>christine.buchanan.finance@datavant.com</td><td>7/2/2026, 10:35:37 PM</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INVOICE LINE ITEMS CARD -->
+    <div class="card" id="line-items-card">
+      <div class="card-header collapsible" onclick="toggleCard('liBody','liChev')">
+        <h2>Invoice Line Items <span class="chev" id="liChev">▾</span></h2>
+      </div>
+      <div class="card-body tight" id="liBody">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div class="actions-wrap">
+            <button class="btn-actions" onclick="toggleActionsMenu()">Actions <span style="font-size:10px;">▾</span></button>
+            <div class="actions-menu" id="actionsMenu">
+              <button onclick="alert('Prototype only — not wired up.'); toggleActionsMenu(false)">Set Requested Amount</button>
+              <button onclick="onSetPaymentStatusClick()">Set Payment Status</button>
+              <button onclick="alert('Prototype only — not wired up.'); toggleActionsMenu(false)">Remove Line Items</button>
+            </div>
+          </div>
+          <button class="btn-secondary" disabled>Save Changes</button>
+        </div>
+
+        <div class="tbl-scroll">
+          <table class="li-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAllChk" onclick="toggleSelectAll(this)"></th>
+                <th>Global</th><th>Invoice</th><th>$ Reqst</th><th>$ Apprv</th><th>Fee Info</th>
+                <th>$ Client Apprv</th><th>Billable</th><th>Apprv Status</th><th>Apprv Last Updated</th>
+                <th>Sub-Inv ID</th><th>RR ID</th><th>RT ID</th><th>RT Status</th><th>RT Status Reason</th><th>Retrieval Method</th>
+              </tr>
+            </thead>
+            <tbody id="liTableBody">
+              <tr data-id="1">
+                <td><input type="checkbox" class="row-chk" id="rowchk-1" onclick="onRowCheck(1)"></td>
+                <td>False</td><td>Invoiced</td>
+                <td><input type="number" class="amt-cell" value="65.00" readonly></td>
+                <td>50.00</td><td><span class="info-icon" id="feeInfoCell-1" title="">ⓘ</span></td><td></td><td></td>
+                <td id="apprvStatus-1"><span class="status-pill requested">REQUESTED</span></td>
+                <td id="apprvUpdated-1"></td>
+                <td class="mono-cell">HG-12345</td><td>SR-039E0001</td><td>ST-039E0001</td>
+                <td>BLOCKED</td><td id="rtReason-1">PNP_6_DIRECT_ACCESS_TO_EMR</td><td>OFFSITE</td>
+              </tr>
+              <tr data-id="2">
+                <td><input type="checkbox" class="row-chk" id="rowchk-2" onclick="onRowCheck(2)"></td>
+                <td>False</td><td>Invoiced</td>
+                <td><input type="number" class="amt-cell" value="65.00" readonly></td>
+                <td>50.00</td><td><span class="info-icon" id="feeInfoCell-2" title="">ⓘ</span></td><td></td><td></td>
+                <td id="apprvStatus-2"><span class="status-pill requested">REQUESTED</span></td>
+                <td id="apprvUpdated-2"></td>
+                <td class="mono-cell">HG-12345</td><td>SR-039E0002</td><td>ST-039E0002</td>
+                <td>BLOCKED</td><td id="rtReason-2">PNP_6_DIRECT_ACCESS_TO_EMR</td><td>OFFSITE</td>
+              </tr>
+              <tr data-id="3">
+                <td><input type="checkbox" class="row-chk" id="rowchk-3" disabled></td>
+                <td>False</td><td>Invoiced</td>
+                <td><input type="number" class="amt-cell" value="42.00" readonly></td>
+                <td>50.00</td><td><span class="info-icon" id="feeInfoCell-3" title="">ⓘ</span></td><td></td><td>✓</td>
+                <td id="apprvStatus-3"><span class="status-pill paid">PAID</span></td>
+                <td id="apprvUpdated-3">7/7/2026, 2:10:49 PM</td>
+                <td class="mono-cell">HG-12345</td><td>SR-039E0003</td><td>ST-039E0003</td>
+                <td>BLOCKED</td><td id="rtReason-3">PNP_6_DIRECT_ACCESS_TO_EMR</td><td>OFFSITE</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ESCALATION CONFIRMATION BANNER (hidden until an escalation is submitted) -->
+        <div id="escBanner">
+          <div class="card-body" style="padding-top:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="confirm-icon pass">✓</div>
+                <h2 style="font-size:14px;font-weight:700;color:#0f172a;">Validation passed — escalation submitted</h2>
+              </div>
+              <button class="modal-close" onclick="hideEscBanner()">✕</button>
+            </div>
+            <div class="section-label">Validation results</div>
+            <div id="val-results"></div>
+            <div class="pend-bar">
+              <span style="font-size:15px;">⏸</span>
+              <span id="pendBarText"></span>
+            </div>
+            <div class="esc-box">
+              <label>Escalation detail string (Req 5A) — generated and stored</label>
+              <div class="esc-string" id="esc-string"></div>
+            </div>
+            <div class="divider"></div>
+            <div class="what-next" id="what-next"></div>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- RECORD SEARCH CARD (static, decorative) -->
+    <div class="card">
+      <div class="card-header collapsible" onclick="toggleCard('rsBody','rsChev')">
+        <h2>Record Search <span class="chev" id="rsChev">▾</span></h2>
+      </div>
+      <div class="card-body" id="rsBody">
+        <div class="rs-actions-row">
+          <button class="btn-primary" style="background:#3b82f6;" onclick="alert('Prototype only — not wired up.')">Upload Line Items</button>
+          <div class="actions-wrap">
+            <button class="btn-actions" onclick="alert('Prototype only — not wired up.')">Actions <span style="font-size:10px;">▾</span></button>
+          </div>
+        </div>
+        <div class="rs-filters">
+          <span class="rs-filter-pill">Project ▾</span>
+          <span class="rs-filter-pill">Provider Package ID ▾</span>
+          <span class="rs-filter-pill">Record Request ID ▾</span>
+          <span class="rs-filter-pill">Retrieval Target ID ▾</span>
+          <span class="rs-filter-pill">Address ▾</span>
+          <span class="rs-filter-pill">Facility Name ▾</span>
+          <span class="rs-filter-pill">Provider Group TIN ▾</span>
+          <span class="rs-filter-pill">Member First Name ▾</span>
+          <span class="rs-filter-pill">Member Last Name ▾</span>
+        </div>
+        <div class="rs-search-row">
+          <input type="text" placeholder="Search: Record Request ID, Retrieval Target ID, Facility Name, Address, Provider Group" disabled>
+          <button class="btn-primary" onclick="alert('Prototype only — not wired up.')">Search</button>
+          <button class="btn-secondary" onclick="alert('Prototype only — not wired up.')">Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SET PAYMENT STATUS MODAL -->
+<div class="modal-overlay" id="statusModal">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">Set Payment Status</div>
+      <button class="modal-close" onclick="closeStatusModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ff" style="margin-bottom:16px;">
+        <label>Payment Status</label>
+        <select id="statusSelect" onchange="onStatusChange()">
+          <option value="">Select a status...</option>
+          <option value="Approved">Approved</option>
+          <option value="Escalated">Escalated</option>
+          <option value="Denied">Denied</option>
+        </select>
+      </div>
+      <div class="ff" id="reasonWrap" style="display:none;margin-bottom:16px;">
+        <label>Payment Status Reason</label>
+        <select id="reasonSelect" onchange="onReasonChange()">
+          <option value="">Select a reason...</option>
+          <option value="Outside Payment Terms">Outside Payment Terms</option>
+          <option value="Missing W9">Missing W9</option>
+        </select>
+      </div>
+      <div id="billableWrap" style="display:none;">
+        <label class="chk-row"><input type="checkbox" id="billableChk" checked> Client Billable</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeStatusModal()">Close</button>
+      <button class="btn-primary" id="setStatusesBtn" disabled onclick="onSetStatuses()">Set Statuses</button>
+    </div>
   </div>
 </div>
 
@@ -363,19 +601,35 @@
     <div class="modal-body">
 
       <div class="fee-ref">
-        <div class="fee-ref-lbl">Fee schedule</div>
+        <div class="fee-ref-lbl">Escalating</div>
+        <div class="fee-ref-val" id="escalatingLineItems"></div>
+      </div>
+      <div class="fee-ref">
+        <div class="fee-ref-lbl">Fee schedule <span class="info-icon" id="feeInfoIcon" title="">ⓘ</span></div>
         <div class="fee-ref-val" id="feeRefVal"></div>
       </div>
 
-      <div class="section-label">Fee rows — 1 to 2 rows per escalation</div>
-
-      <!-- Row 1 -->
+      <div class="section-label">Vendor &amp; payment timing — from this invoice, not editable here</div>
       <div class="frb">
-        <div class="frb-top"><span class="row-tag">ROW 1</span></div>
         <div class="row-fields">
           <div class="ff">
-            <label>$ Amount <span class="req-mark">*</span></label>
-            <input type="number" id="r1amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(1)" onchange="updateHint(1)"/>
+            <label>Vendor</label>
+            <div class="value" id="vendorDisplay" style="font-weight:600;"></div>
+          </div>
+          <div class="ff">
+            <label>Payment Timing</label>
+            <div class="value" id="ptDisplay" style="font-weight:600;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Fee rows — enter an amount for at least one row</div>
+
+      <div class="frb">
+        <div class="row-fields">
+          <div class="ff">
+            <label>$ Amount <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;">(from invoice)</span></label>
+            <input type="number" id="r1amt" class="amt-locked" min="0" step="0.01" placeholder="0.00" readonly/>
             <div class="amt-hint" id="r1hint"></div>
           </div>
           <div class="ff">
@@ -383,84 +637,32 @@
             <div class="rg">
               <div class="rb on" id="r1ft-chart" onclick="setFT(1,'chart')">Per Chart</div>
               <div class="rb" id="r1ft-page" onclick="setFT(1,'page')">Per Page</div>
-              <div class="rb" id="r1ft-cna" onclick="setFT(1,'cna')">CNA Fee</div>
             </div>
           </div>
           <div class="ff">
-            <label>Vendor <span class="req-mark">*</span></label>
-            <div class="rg">
-              <div class="rb on" id="r1v-prov" onclick="setV(1,'prov')">Provider</div>
-              <div class="rb" id="r1v-hih" onclick="setV(1,'hih')">HIH</div>
-            </div>
-            <div class="vname-wrap" id="r1vn-wrap">
-              <input type="text" id="r1vname" placeholder="Vendor name (required)" oninput="updateHint(1)"/>
-            </div>
-            <div class="carveout-alert" id="r1carveout">
-              Review the client fee details to determine whether this vendor has a carveout rate before submitting.
-              <span class="fee-string-inline" id="r1carveoutStr"></span>
-            </div>
+            <label>$ Amount</label>
+            <input type="number" id="r2amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(2)" onchange="updateHint(2)"/>
+            <div class="amt-hint" id="r2hint"></div>
           </div>
           <div class="ff">
-            <label>Payment Timing <span class="req-mark">*</span></label>
+            <label>Fee Type</label>
             <div class="rg">
-              <div class="rb on" id="r1pt-pre" onclick="setPT(1,'pre')">Prepay</div>
-              <div class="rb" id="r1pt-post" onclick="setPT(1,'post')">Postpay</div>
+              <div class="rb on">CNA Fee</div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Row 2 -->
-      <div id="row2wrap" style="display:none;">
-        <div class="frb">
-          <div class="frb-top">
-            <span class="row-tag">ROW 2</span>
-            <button class="btn-rm" onclick="rmRow2()">✕ Remove row</button>
-          </div>
-          <div class="row-fields">
-            <div class="ff">
-              <label>$ Amount <span class="req-mark">*</span></label>
-              <input type="number" id="r2amt" min="0" step="0.01" placeholder="0.00" oninput="updateHint(2)" onchange="updateHint(2)"/>
-              <div class="amt-hint" id="r2hint"></div>
-            </div>
-            <div class="ff">
-              <label>Fee Type <span class="req-mark">*</span></label>
-              <div class="rg">
-                <div class="rb on" id="r2ft-chart" onclick="setFT(2,'chart')">Per Chart</div>
-                <div class="rb" id="r2ft-page" onclick="setFT(2,'page')">Per Page</div>
-                <div class="rb" id="r2ft-cna" onclick="setFT(2,'cna')">CNA Fee</div>
-              </div>
-            </div>
-            <div class="ff">
-              <label>Vendor <span class="req-mark">*</span></label>
-              <div class="rg">
-                <div class="rb on" id="r2v-prov" onclick="setV(2,'prov')">Provider</div>
-                <div class="rb" id="r2v-hih" onclick="setV(2,'hih')">HIH</div>
-              </div>
-              <div class="vname-wrap" id="r2vn-wrap">
-                <input type="text" id="r2vname" placeholder="Vendor name (required)" oninput="updateHint(2)"/>
-              </div>
-            </div>
-            <div class="ff">
-              <label>Payment Timing <span class="req-mark">*</span></label>
-              <div class="rg">
-                <div class="rb on" id="r2pt-pre" onclick="setPT(2,'pre')">Prepay</div>
-                <div class="rb" id="r2pt-post" onclick="setPT(2,'post')">Postpay</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="hint-static" id="combo-hint">One row must be CNA. Cannot combine Per Chart and Per Page in the same escalation.</div>
-      </div>
-
-      <div id="addRowBtn">
-        <button class="btn-add" onclick="addRow2()">+ Add a row</button>
       </div>
 
       <div class="notes-wrap" style="margin-top:18px;">
         <label class="note-lbl">Agent note <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
-        <textarea id="agent-note" placeholder="Add a note if needed..."></textarea>
+        <textarea id="agent-note" placeholder="Add a note if needed..." oninput="onAgentNoteInput()"></textarea>
       </div>
+
+      <div class="esc-preview">
+        <label>Escalation statement — this is what the client will see in Chart Compass</label>
+        <div class="esc-preview-text" id="escPreviewText"></div>
+      </div>
+
       <div class="submit-err" id="submit-err"></div>
     </div>
     <div class="modal-actions">
@@ -472,24 +674,39 @@
 
 <script>
 // ── Fee schedule (order-level) ───────────────────────────────────────────
-// Prov+HIH combined Pre+Postpay $35/chart, CNA $10 | Verisma (carveout) $50/chart, CNA $15 | Not approved for Ciox Health
-const FEE_SCHEDULE_STRING = 'Prov+HIH Pre+Postpay $35, CNA $10 | Verisma $50, CNA $15 | Not approved for Ciox Health';
+const FEE_SCHEDULE_STRING = 'Prov+HIH Pre+Postpay $35, CNA $10 | Verisma $50, CNA $15 | Not approved for MRO';
 document.getElementById('feeScheduleString').textContent = FEE_SCHEDULE_STRING;
-document.getElementById('feeRefVal').textContent = FEE_SCHEDULE_STRING;
-document.getElementById('r1carveoutStr').textContent = FEE_SCHEDULE_STRING;
-
-const HAS_CARVEOUT = true;
+document.getElementById('feeInfoIcon').title = FEE_SCHEDULE_STRING;
+[1,2,3].forEach(id => { document.getElementById('feeInfoCell-'+id).title = FEE_SCHEDULE_STRING; });
 
 const SCHEDULE = {
   'prov|pre|chart': 35, 'prov|post|chart': 35, 'prov|pre|cna': 10, 'prov|post|cna': 10,
   'hih|pre|chart':  35, 'hih|post|chart':  35, 'hih|pre|cna':  10, 'hih|post|cna':  10,
 };
 
-const R = {
-  1: { ft: 'chart', v: 'prov', pt: 'pre' },
-  2: { ft: 'chart', v: 'prov', pt: 'pre' },
+// Named HIH carveout rates. Because the vendor name is structured (pulled from the invoice,
+// not free-typed), validation can match it directly instead of just flagging "go check manually."
+const CARVEOUTS = {
+  'Verisma': { chart: 50, cna: 15 },
 };
-let hasRow2 = false;
+
+// ── Invoice line item data (mirrors the real HubPay invoice line item grid) ──
+const LINE_ITEMS = {
+  1: { rtId: 'ST-039E0001', vendor: 'Verisma', vendorType: 'hih', reqst: 65.00, pt: 'pre', selectable: true },
+  2: { rtId: 'ST-039E0002', vendor: 'Verisma', vendorType: 'hih', reqst: 65.00, pt: 'pre', selectable: true },
+  3: { rtId: 'ST-039E0003', vendor: 'Verisma', vendorType: 'hih', reqst: 42.00, pt: 'pre', selectable: false },
+};
+let selectedRows = new Set();
+
+// Vendor, vendor name, payment timing, and the row 1 amount all come from the invoice already
+// entered in HubPay — locked here, not re-entered by the agent. Row 1 is Per Chart/Per Page
+// (row 2 is always CNA) — fixed structurally so the "no chart+page combo" rule never needs
+// to be spelled out or checked.
+const ESC = { v: 'prov', pt: 'pre', vendorName: '' };
+const R = {
+  1: { ft: 'chart' },
+  2: { ft: 'cna' },
+};
 
 function fmt(n) {
   const f = parseFloat(n);
@@ -497,14 +714,35 @@ function fmt(n) {
   return '$' + (Number.isInteger(f) ? f : f.toFixed(2));
 }
 function ftLabel(ft) { return ft==='chart' ? 'per chart' : ft==='page' ? 'per page' : 'CNA fee'; }
-function vLabel(row) {
-  const vn = document.getElementById('r'+row+'vname')?.value?.trim() || '';
-  return R[row].v === 'prov' ? 'Provider' : (vn ? 'HIH ('+vn+')' : 'HIH');
+function vLabel() {
+  return ESC.v === 'prov' ? 'Provider' : (ESC.vendorName || 'HIH');
 }
-function ptLabel(pt) { return pt === 'post' ? 'Postpay' : 'Prepay'; }
-function lookupApproved(v, pt, ft) {
-  const key = v+'|'+pt+'|'+ft;
+function ptLabel(pt) { return pt === 'post' ? 'Postpay' : 'Pre+Post'; }
+function timingPhrase(pt) { return pt === 'post' ? 'Postpay' : 'Prepay or Postpay'; }
+function lookupApproved(ft) {
+  if (ESC.v === 'hih' && CARVEOUTS[ESC.vendorName]) {
+    const rate = CARVEOUTS[ESC.vendorName][ft];
+    return (rate !== undefined) ? rate : null;
+  }
+  const key = ESC.v+'|'+ESC.pt+'|'+ft;
   return (key in SCHEDULE) ? SCHEDULE[key] : null;
+}
+function buildFeeRefShort() {
+  if (ESC.v === 'hih' && CARVEOUTS[ESC.vendorName]) {
+    const c = CARVEOUTS[ESC.vendorName];
+    const timing = ESC.pt === 'post' ? 'Postpay' : 'Pre+Postpay';
+    return `${ESC.vendorName} ${timing} $${c.chart}, CNA $${c.cna}`;
+  }
+  return `${vLabel()} — ${ptLabel(ESC.pt)}`;
+}
+
+// ── Collapsible cards ────────────────────────────────────────────────────
+function toggleCard(bodyId, chevId) {
+  const body = document.getElementById(bodyId);
+  const chev = document.getElementById(chevId);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  chev.textContent = open ? '▸' : '▾';
 }
 
 // ── Fee expand ────────────────────────────────────────────────────────────
@@ -513,51 +751,138 @@ function toggleFee() {
   document.getElementById('feeHint').textContent = open ? 'Hide ▴' : 'View full fee detail string ▾';
 }
 
-// ── Modal open/close ──────────────────────────────────────────────────────
+// ── Line item selection ──────────────────────────────────────────────────
+function onRowCheck(id) {
+  const chk = document.getElementById('rowchk-'+id);
+  const tr = chk.closest('tr');
+  if (chk.checked) { selectedRows.add(id); tr.classList.add('selected'); }
+  else { selectedRows.delete(id); tr.classList.remove('selected'); }
+}
+function toggleSelectAll(el) {
+  Object.keys(LINE_ITEMS).forEach(id => {
+    id = parseInt(id);
+    if (!LINE_ITEMS[id].selectable) return;
+    const chk = document.getElementById('rowchk-'+id);
+    chk.checked = el.checked;
+    onRowCheck(id);
+  });
+}
+
+// ── Actions dropdown ──────────────────────────────────────────────────────
+function toggleActionsMenu(forceState) {
+  const menu = document.getElementById('actionsMenu');
+  const open = typeof forceState === 'boolean' ? forceState : !menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+}
+document.addEventListener('click', function (e) {
+  const wrap = e.target.closest('.actions-wrap');
+  if (!wrap) document.getElementById('actionsMenu').classList.remove('open');
+});
+function onSetPaymentStatusClick() {
+  toggleActionsMenu(false);
+  if (selectedRows.size === 0) { alert('Select at least one line item first.'); return; }
+  openStatusModal();
+}
+
+// ── Set Payment Status modal ─────────────────────────────────────────────
+function openStatusModal() {
+  document.getElementById('statusSelect').value = '';
+  document.getElementById('reasonSelect').value = '';
+  document.getElementById('billableChk').checked = true;
+  document.getElementById('reasonWrap').style.display = 'none';
+  document.getElementById('billableWrap').style.display = 'none';
+  document.getElementById('setStatusesBtn').disabled = true;
+  document.getElementById('statusModal').classList.add('open');
+}
+function closeStatusModal() { document.getElementById('statusModal').classList.remove('open'); }
+function onStatusChange() {
+  const status = document.getElementById('statusSelect').value;
+  document.getElementById('reasonWrap').style.display = status === 'Escalated' ? 'block' : 'none';
+  document.getElementById('billableWrap').style.display = 'none';
+  document.getElementById('reasonSelect').value = '';
+  recomputeSetStatusesBtn();
+}
+function onReasonChange() {
+  const reason = document.getElementById('reasonSelect').value;
+  document.getElementById('billableWrap').style.display = reason ? 'block' : 'none';
+  recomputeSetStatusesBtn();
+}
+function recomputeSetStatusesBtn() {
+  const status = document.getElementById('statusSelect').value;
+  const reason = document.getElementById('reasonSelect').value;
+  const ok = status && (status !== 'Escalated' || reason);
+  document.getElementById('setStatusesBtn').disabled = !ok;
+}
+function onSetStatuses() {
+  const status = document.getElementById('statusSelect').value;
+  const reason = document.getElementById('reasonSelect').value;
+  closeStatusModal();
+  if (status === 'Escalated' && reason === 'Outside Payment Terms') {
+    openEscalationModal();
+    return;
+  }
+  if (status === 'Escalated' && reason === 'Missing W9') {
+    applyStatusToSelected('escalated', 'ESCALATED', 'PNP018_MISSING_W9');
+    return;
+  }
+  applyStatusToSelected(status.toLowerCase(), status.toUpperCase(), reason || '');
+}
+function applyStatusToSelected(pillClass, label, rtReason) {
+  selectedRows.forEach(id => {
+    const cell = document.getElementById('apprvStatus-'+id);
+    cell.innerHTML = '<span class="status-pill '+pillClass+'">'+label+'</span>';
+    if (rtReason) document.getElementById('rtReason-'+id).textContent = rtReason;
+    document.getElementById('apprvUpdated-'+id).textContent = '7/14/2026, 9:00:00 AM';
+    document.getElementById('rowchk-'+id).checked = false;
+    document.getElementById('rowchk-'+id).closest('tr').classList.remove('selected');
+  });
+  selectedRows.clear();
+  document.getElementById('selectAllChk').checked = false;
+}
+
+// ── Escalation form modal ────────────────────────────────────────────────
+function resetEscForm() {
+  R[1].ft = 'chart';
+  document.getElementById('r2amt').value = '';
+  document.getElementById('agent-note').value = '';
+  document.getElementById('submit-err').classList.remove('show');
+  [1,2].forEach(r => {
+    const h = document.getElementById('r'+r+'hint');
+    h.className = 'amt-hint'; h.textContent = '';
+    document.getElementById('r'+r+'amt').classList.remove('warn','good','err');
+  });
+  ['chart','page'].forEach(o => document.getElementById('r1ft-'+o).classList.toggle('on', o==='chart'));
+  refreshPreview();
+}
 function openEscalationModal() {
-  // Pre-populate Row 1 from the invoice line item already on screen
-  setV(1, 'hih');
-  document.getElementById('r1vname').value = 'Verisma';
-  document.getElementById('r1amt').value = '65.00';
+  resetEscForm();
+  const ids = Array.from(selectedRows);
+  const items = ids.map(id => LINE_ITEMS[id]);
+  document.getElementById('escalatingLineItems').textContent =
+    ids.length + ' line item(s): ' + items.map(i => i.rtId).join(', ');
+
+  // Vendor, vendor name, payment timing, and the row 1 amount are locked — pulled from the invoice.
+  const first = items[0];
+  ESC.v = first.vendorType === 'hih' ? 'hih' : 'prov';
+  ESC.pt = first.pt || 'pre';
+  ESC.vendorName = ESC.v === 'hih' ? first.vendor : '';
+  document.getElementById('vendorDisplay').textContent = vLabel();
+  document.getElementById('ptDisplay').textContent = ptLabel(ESC.pt);
+  document.getElementById('feeRefVal').textContent = buildFeeRefShort();
+  document.getElementById('r1amt').value = first.reqst.toFixed(2);
   updateHint(1);
   document.getElementById('escModal').classList.add('open');
 }
 function closeEscalationModal() { document.getElementById('escModal').classList.remove('open'); }
-function closeWarnModal() { document.getElementById('warnModal').classList.remove('open'); }
 
 // ── Radios ────────────────────────────────────────────────────────────────
 function setFT(row, val) {
-  ['chart','page','cna'].forEach(o => document.getElementById('r'+row+'ft-'+o).classList.toggle('on', o===val));
+  ['chart','page'].forEach(o => document.getElementById('r'+row+'ft-'+o).classList.toggle('on', o===val));
   R[row].ft = val;
   updateHint(row);
-  if (hasRow2) updateComboHint();
 }
-function updateComboHint() {
-  const hint = document.getElementById('combo-hint');
-  if (!hint) return;
-  const ft1 = R[1].ft, ft2 = R[2].ft;
-  const invalid = (ft1 === 'chart' && ft2 === 'page') || (ft1 === 'page' && ft2 === 'chart');
-  if (invalid) {
-    hint.textContent = '⚠ Cannot combine Per Chart and Per Page in the same escalation.';
-    hint.style.color = '#d97706';
-  } else {
-    hint.textContent = 'One row must be CNA. Cannot combine Per Chart and Per Page in the same escalation.';
-    hint.style.color = '#94a3b8';
-  }
-}
-function setV(row, val) {
-  ['prov','hih'].forEach(o => document.getElementById('r'+row+'v-'+o).classList.toggle('on', o===val));
-  R[row].v = val;
-  document.getElementById('r'+row+'vn-wrap').classList.toggle('show', val==='hih');
-  if (row === 1) {
-    document.getElementById('r1carveout').classList.toggle('show', val==='hih' && HAS_CARVEOUT);
-  }
-  updateHint(row);
-}
-function setPT(row, val) {
-  ['pre','post'].forEach(o => document.getElementById('r'+row+'pt-'+o).classList.toggle('on', o===val));
-  R[row].pt = val;
-  updateHint(row);
+function onAgentNoteInput() {
+  refreshPreview();
 }
 
 // ── Inline amount hint ────────────────────────────────────────────────────
@@ -565,124 +890,122 @@ function updateHint(row) {
   const input    = document.getElementById('r'+row+'amt');
   const hint     = document.getElementById('r'+row+'hint');
   const amt      = parseFloat(input.value);
-  const approved = lookupApproved(R[row].v, R[row].pt, R[row].ft);
+  const approved = lookupApproved(R[row].ft);
 
   input.classList.remove('warn','good','err');
   hint.className = 'amt-hint';
   hint.textContent = '';
 
-  if (isNaN(amt) || input.value === '') { refreshSubmitState(); return; }
-
-  if (approved === null) {
-    hint.className = 'amt-hint h-skip show';
-    hint.textContent = 'No approved rate for this combination — validation will be skipped.';
-    refreshSubmitState();
-    return;
+  if (!isNaN(amt) && input.value !== '') {
+    if (approved === null) {
+      hint.className = 'amt-hint h-skip show';
+      hint.textContent = 'No approved rate for this combination';
+    } else if (amt > approved) {
+      input.classList.add('good');
+      hint.className = 'amt-hint h-good show';
+      hint.textContent = `✓ Exceeds approved ${fmt(approved)} — valid escalation.`;
+    } else {
+      input.classList.add('warn');
+      hint.className = 'amt-hint h-warn show';
+      const rel = amt === approved ? 'equals' : 'does not exceed';
+      hint.textContent = `⚠ ${fmt(amt)} ${rel} the approved ${fmt(approved)}`;
+    }
   }
-
-  if (amt > approved) {
-    input.classList.add('good');
-    hint.className = 'amt-hint h-good show';
-    hint.textContent = `✓ Exceeds approved ${fmt(approved)} — valid escalation.`;
-  } else {
-    input.classList.add('err');
-    hint.className = 'amt-hint h-err show';
-    const rel = amt === approved ? 'equals' : 'does not exceed';
-    hint.textContent = `✗ ${fmt(amt)} ${rel} the approved ${fmt(approved)} — not a valid escalation. Remove the amount or delete this row to continue.`;
-  }
+  refreshPreview();
   refreshSubmitState();
 }
 
-// ── Submit gating ─────────────────────────────────────────────────────────
-function hasInvalidRow() {
-  const rows = hasRow2 ? [1,2] : [1];
-  return rows.some(r => {
-    const amt      = parseFloat(document.getElementById('r'+r+'amt').value);
-    const approved = lookupApproved(R[r].v, R[r].pt, R[r].ft);
-    return !isNaN(amt) && approved !== null && amt <= approved;
+// ── Escalation statement preview (Requirement 5A) ─────────────────────────
+function buildEscString() {
+  const rows = filledRows();
+  if (!rows.length) return '';
+  const note = document.getElementById('agent-note').value.trim();
+  let str;
+  if (rows.includes(1)) {
+    const r1amt = parseFloat(document.getElementById('r1amt').value) || 0;
+    str = `${vLabel()} requests ${timingPhrase(ESC.pt)}, ${fmt(r1amt)} ${ftLabel(R[1].ft)}`;
+    if (rows.includes(2)) {
+      const r2amt = parseFloat(document.getElementById('r2amt').value) || 0;
+      str += `, ${fmt(r2amt)} CNA`;
+    }
+    str += '.';
+  } else {
+    const r2amt = parseFloat(document.getElementById('r2amt').value) || 0;
+    str = `${vLabel()} requests ${timingPhrase(ESC.pt)}, ${fmt(r2amt)} CNA.`;
+  }
+  if (note) str += ` ${note}`;
+  return str;
+}
+function refreshPreview() {
+  const el = document.getElementById('escPreviewText');
+  if (!el) return;
+  el.textContent = buildEscString() || 'Enter an amount for at least one row to preview the escalation statement.';
+}
+
+// ── Row-level validation (Requirement 7) ───────────────────────────────────
+// A row is submittable if it has no comparable rate in the fee schedule (e.g. the
+// schedule only has a Per Chart rate and the agent picked Per Page), or if the
+// amount requested exceeds the approved rate. The escalation as a whole can be
+// submitted as long as at least one filled row meets one of those conditions.
+function filledRows() {
+  return [1,2].filter(r => {
+    const v = document.getElementById('r'+r+'amt').value;
+    return v !== '' && !isNaN(parseFloat(v));
   });
+}
+function rowIsSubmittable(r) {
+  const amt      = parseFloat(document.getElementById('r'+r+'amt').value);
+  const approved = lookupApproved(R[r].ft);
+  return approved === null || amt > approved;
+}
+function canSubmit() {
+  const rows = filledRows();
+  return rows.length > 0 && rows.some(rowIsSubmittable);
 }
 function refreshSubmitState() {
   const btn = document.getElementById('submitEscBtn');
-  const invalid = hasInvalidRow();
-  btn.disabled = invalid;
   const errEl = document.getElementById('submit-err');
-  if (invalid) {
-    errEl.textContent = 'One or more rows do not exceed the client-approved rate. Remove the amount or delete the row before submitting.';
-    errEl.classList.add('show');
-  } else {
+  const rows = filledRows();
+  if (rows.length === 0) {
+    btn.disabled = true;
     errEl.classList.remove('show');
+    return;
   }
-}
-
-// ── Row 2 ─────────────────────────────────────────────────────────────────
-function addRow2() {
-  hasRow2 = true;
-  document.getElementById('row2wrap').style.display = 'block';
-  document.getElementById('addRowBtn').style.display = 'none';
-  updateComboHint();
-  refreshSubmitState();
-}
-function rmRow2() {
-  hasRow2 = false;
-  document.getElementById('row2wrap').style.display = 'none';
-  document.getElementById('addRowBtn').style.display = 'block';
-  const h = document.getElementById('r2hint');
-  h.className = 'amt-hint'; h.textContent = '';
-  document.getElementById('r2amt').classList.remove('warn','good','err');
-  refreshSubmitState();
+  const ok = rows.some(rowIsSubmittable);
+  btn.disabled = !ok;
+  if (ok) {
+    errEl.classList.remove('show');
+  } else {
+    errEl.textContent = 'None of the amounts entered exceed the client-approved rate for this vendor — this escalation cannot be submitted.';
+    errEl.classList.add('show');
+  }
 }
 
 // ── Submit ────────────────────────────────────────────────────────────────
 function submitEsc() {
-  const errEl = document.getElementById('submit-err');
-  errEl.classList.remove('show');
-
-  if (hasInvalidRow()) {
-    refreshSubmitState();
-    return;
-  }
-
-  if (hasRow2) {
-    const ft1 = R[1].ft, ft2 = R[2].ft;
-    if ((ft1 === 'chart' && ft2 === 'page') || (ft1 === 'page' && ft2 === 'chart')) {
-      errEl.textContent = 'Per Chart and Per Page cannot be combined in the same escalation.';
-      errEl.classList.add('show');
-      return;
-    }
-    if (ft1 !== 'cna' && ft2 !== 'cna') {
-      errEl.textContent = 'When submitting two rows, at least one must be a CNA fee.';
-      errEl.classList.add('show');
-      return;
-    }
-  }
-
-  if (R[1].v === 'hih' && !document.getElementById('r1vname').value.trim()) {
-    errEl.textContent = 'Vendor name is required when Vendor = HIH.';
-    errEl.classList.add('show');
-    return;
-  }
-
+  if (!canSubmit()) { refreshSubmitState(); return; }
   finalizeEscalation();
 }
 
 function finalizeEscalation() {
   closeEscalationModal();
-  buildConfirmation();
-  document.getElementById('line-item-card').style.display = 'none';
-  document.getElementById('escalation-confirm').style.display = 'block';
+  const ids = Array.from(selectedRows);
+  buildConfirmation(ids);
+  applyStatusToSelected('escalated', 'ESCALATED', 'PNP024_OUTSIDE_PAYMENT_TERMS');
+  document.getElementById('escBanner').style.display = 'block';
+  document.getElementById('escBanner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// ── Build confirmation card ───────────────────────────────────────────────
-function buildConfirmation() {
-  const rows = hasRow2 ? [1,2] : [1];
+// ── Build confirmation banner ─────────────────────────────────────────────
+function buildConfirmation(ids) {
+  const rows = filledRows();
   let html = '';
 
   rows.forEach(r => {
     const amt      = parseFloat(document.getElementById('r'+r+'amt').value) || 0;
-    const approved = lookupApproved(R[r].v, R[r].pt, R[r].ft);
-    const vl       = vLabel(r);
-    const ptl      = ptLabel(R[r].pt);
+    const approved = lookupApproved(R[r].ft);
+    const vl       = vLabel();
+    const ptl      = ptLabel(ESC.pt);
     const ftl      = ftLabel(R[r].ft);
     let cls, iconCls, iconChar, small, compHtml;
 
@@ -690,6 +1013,10 @@ function buildConfirmation() {
       cls='skip'; iconCls='skip'; iconChar='—';
       small = 'No matching fee schedule entry — validation skipped.';
       compHtml = `<div class="appr" style="color:#94a3b8;">No approved rate</div>`;
+    } else if (amt <= approved) {
+      cls='skip'; iconCls='skip'; iconChar='—';
+      small = 'Did not exceed approved rate — not counted toward validation.';
+      compHtml = `<div class="req">Requested ${fmt(amt)}</div><div class="appr">Approved ${fmt(approved)}</div>`;
     } else {
       cls='pass'; iconCls='pass'; iconChar='✓';
       small = 'Requested amount exceeds approved rate. Escalation valid.';
@@ -707,43 +1034,18 @@ function buildConfirmation() {
 
   document.getElementById('val-results').innerHTML = html;
 
-  document.getElementById('confirmIcon').className = 'confirm-icon pass';
-  document.getElementById('confirmIcon').textContent = '✓';
-  document.getElementById('confirmTitle').textContent = 'Validation passed — escalation submitted';
+  const rtIds = ids.map(id => LINE_ITEMS[id].rtId).join(', ');
+  document.getElementById('pendBarText').textContent =
+    'PNP024 applied to ' + rtIds + '. Escalation routed to Hub → Routing → Chart Compass for client review.';
 
-  const r1amt = parseFloat(document.getElementById('r1amt').value) || 0;
-  const r2amt = hasRow2 ? (parseFloat(document.getElementById('r2amt').value) || 0) : 0;
-  let str = `${vLabel(1)} has requested ${ptLabel(R[1].pt)} ${fmt(r1amt)} ${ftLabel(R[1].ft)}`;
-  if (hasRow2 && r2amt > 0) str += ` and ${fmt(r2amt)} CNA fee`;
-  str += '.';
-  const note = document.getElementById('agent-note').value.trim();
-  if (note) str += ` Agent note: ${note}`;
-  document.getElementById('esc-string').textContent = str;
+  document.getElementById('esc-string').textContent = buildEscString();
 
   document.getElementById('what-next').innerHTML =
     '<strong>What happens next:</strong> The escalation detail string and structured fee data are sent to Chart Compass via Hub and Routing. The client will see this alongside the order fee schedule and can Approve, Edit, or Decline. Their response will return to this invoice line item in HubPay.';
 }
 
-// ── Reset ─────────────────────────────────────────────────────────────────
-function resetDemo() {
-  document.getElementById('r1amt').value = '';
-  document.getElementById('r2amt').value = '';
-  document.getElementById('r1vname').value = '';
-  document.getElementById('r2vname').value = '';
-  [1,2].forEach(r => {
-    const h = document.getElementById('r'+r+'hint');
-    h.className = 'amt-hint'; h.textContent = '';
-    document.getElementById('r'+r+'amt').classList.remove('warn','good','err');
-  });
-  document.getElementById('r1carveout').classList.remove('show');
-  document.getElementById('agent-note').value = '';
-  document.getElementById('submit-err').classList.remove('show');
-  setFT(1,'chart'); setV(1,'prov'); setPT(1,'pre');
-  setFT(2,'chart'); setV(2,'prov'); setPT(2,'pre');
-  if (hasRow2) rmRow2();
-  refreshSubmitState();
-  document.getElementById('escalation-confirm').style.display = 'none';
-  document.getElementById('line-item-card').style.display = 'block';
+function hideEscBanner() {
+  document.getElementById('escBanner').style.display = 'none';
 }
 </script>
 
