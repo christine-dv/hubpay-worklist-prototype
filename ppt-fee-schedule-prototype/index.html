@@ -79,6 +79,52 @@
   .field-error { color: var(--danger); font-size: 11px; margin-top: 2px; display: block; }
   .err select, .err input { border-color: var(--danger) !important; }
 
+  .vendor-combo { position: relative; }
+  .vendor-combo input.has-clear { padding-right: 26px; }
+  .vendor-clear-btn {
+    position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+    background: none; border: none; color: var(--sub); font-size: 15px; line-height: 1;
+    cursor: pointer; padding: 3px 5px; border-radius: 4px;
+  }
+  .vendor-clear-btn:hover { color: var(--danger); background: #fbe4e4; }
+  .link-btn {
+    background: none; border: none; color: var(--accent-dark); font-size: 11px; cursor: pointer;
+    padding: 3px 0 0; text-decoration: underline;
+  }
+  .vendor-combo-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin: 2px 0 0; padding: 4px 0;
+    list-style: none; background: #fff; border: 1px solid #c7cdd6; border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(20, 25, 40, 0.12); max-height: 190px; overflow-y: auto;
+  }
+  .vendor-combo-list.hidden { display: none; }
+  .vendor-combo-list li { padding: 6px 10px; font-size: 13px; cursor: pointer; color: var(--ink); }
+  .vendor-combo-list li:hover, .vendor-combo-list li.active { background: #f0f4fd; }
+  .vendor-combo-list li.no-match { color: #b7bcc4; cursor: default; }
+  .vendor-combo-list li.no-match:hover { background: none; }
+  .vendor-combo-list li.other-option { border-top: 1px solid #eef0f3; color: var(--accent-dark); font-weight: 600; }
+
+  .pw-gate {
+    position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center;
+    justify-content: center; z-index: 100;
+  }
+  .pw-gate.hidden { display: none; }
+  .pw-box {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 28px 30px;
+    width: 280px; box-shadow: 0 8px 24px rgba(20, 25, 40, 0.10); display: flex; flex-direction: column; gap: 10px;
+  }
+  .pw-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .pw-sub { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+  .pw-input {
+    padding: 8px 10px; font-size: 14px; border: 1px solid #c7cdd6; border-radius: 6px; color: var(--ink);
+  }
+  .pw-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .pw-submit {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 8px 12px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .pw-submit:hover { background: var(--accent-dark); }
+  .pw-error { color: var(--danger); font-size: 12px; min-height: 14px; }
+
   .preview-box {
     margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   }
@@ -135,6 +181,15 @@
 </style>
 </head>
 <body>
+<div class="pw-gate" id="pwGate">
+  <form class="pw-box" id="pwForm">
+    <div class="pw-title">PPT Fee Schedule — Prototype</div>
+    <div class="pw-sub">Enter password to continue</div>
+    <input type="password" id="pwInput" class="pw-input" placeholder="Password" autocomplete="off" autofocus>
+    <button type="submit" class="pw-submit">Unlock</button>
+    <div class="pw-error" id="pwError"></div>
+  </form>
+</div>
 <div class="wrap" id="app"></div>
 
 <script>
@@ -143,6 +198,16 @@
 --------------------------------------------------------------------- */
 const VENDOR_TYPES = ["Provider/Hospital", "General HIH", "HIH Carveout"];
 const FEE_TYPES = ["Per Chart", "Per Page"];
+const CARVEOUT_VENDOR_NAMES = [
+  "Advantmed", "Al Imaging", "AMS", "Better Instant", "BHS", "Care Consultants",
+  "Chartpro", "Chartrequest", "CHM", "Copy Cat", "Copy Mate", "Copy Med",
+  "Data Dimensions", "Datafied", "Datalink", "Diversified DMRS", "Document Access",
+  "GRM", "Gulf Coast", "Healthcare Technologies", "Healthmark", "HIMQS", "IBS",
+  "Iron Mtn", "Lexa", "Medical Docs", "Medical Records Now", "Medicopy", "Medrec",
+  "Medrecs", "MMRA", "Morgan Records", "Mr P Copy", "MRO", "Noble", "Recordconnect",
+  "Recordquest", "Scanstat", "Scanning Sherpas", "Sharecare", "Summit Retrieval",
+  "Total Document Access", "Verisma", "VRC", "Westside Medical"
+].sort((a, b) => a.localeCompare(b));
 
 function paymentTypeOptions(vendorType) {
   if (vendorType === "HIH Carveout") {
@@ -157,6 +222,7 @@ function newRow() {
     id: rowSeq++,
     vendorType: "",
     vendorName: "",
+    vendorNameOther: false,
     paymentType: "Pre+Post Pay",
     feeType: "Per Chart",
     amount: "",
@@ -210,8 +276,11 @@ function paymentLabel(pt) {
 
 function isCarveoutName(row) { return hasVendorNameField(row.vendorType); }
 
-function vendorCategory(vendorType) {
-  return (vendorType === "Provider/Hospital") ? "provider" : "hih";
+// Ordering: Provider/Hospital first, General HIH second, HIH Carveout (alpha by name) last.
+function vendorRank(vendorType) {
+  if (vendorType === "Provider/Hospital") return 0;
+  if (vendorType === "General HIH") return 1;
+  return 2;
 }
 
 function buildFeeText() {
@@ -271,25 +340,36 @@ function buildFeeText() {
       mergeMap.set(key, { paymentType: g.paymentType, feesString: g.feesString, labels: [] });
       mergeOrder.push(key);
     }
-    mergeMap.get(key).labels.push({ text: vendorLabel(g), isCarveout: g.vendorType === "HIH Carveout", category: vendorCategory(g.vendorType) });
+    mergeMap.get(key).labels.push({
+      text: vendorLabel(g),
+      isCarveout: g.vendorType === "HIH Carveout",
+      rank: vendorRank(g.vendorType)
+    });
   });
 
   let mergedGroups = mergeOrder.map(k => {
     const g = mergeMap.get(k);
+    // Within a merged group: Provider first, General HIH second, then Carveouts alpha by name.
+    const sortedLabels = g.labels.slice().sort((a, b) => a.rank - b.rank || a.text.localeCompare(b.text));
     let combined = "";
-    g.labels.forEach((lbl, i) => {
+    sortedLabels.forEach((lbl, i) => {
       if (i === 0) { combined = lbl.text; return; }
-      const prev = g.labels[i - 1];
+      const prev = sortedLabels[i - 1];
       combined += (prev.isCarveout && lbl.isCarveout) ? ", " + lbl.text : "+" + lbl.text;
     });
-    return { paymentType: g.paymentType, feesString: g.feesString, vendorLabel: combined, category: g.labels[0].category };
+    return {
+      paymentType: g.paymentType,
+      feesString: g.feesString,
+      vendorLabel: combined,
+      rank: Math.min(...sortedLabels.map(l => l.rank)),
+      sortName: sortedLabels[0].text
+    };
   });
 
-  // Order: Provider/Hospital groups first, then General HIH / HIH Carveout / Exception groups
-  const CATEGORY_ORDER = { provider: 0, hih: 1 };
+  // Order: Provider/Hospital groups first, then General HIH groups, then Carveout groups alpha by name.
   mergedGroups = mergedGroups
     .map((g, i) => ({ ...g, i }))
-    .sort((a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category] || a.i - b.i);
+    .sort((a, b) => a.rank - b.rank || a.sortName.localeCompare(b.sortName) || a.i - b.i);
 
   // Step D: always lead with the payment type when every group shares one
   let nonExclusionSegments = [];
@@ -356,6 +436,73 @@ function optionsHtml(options, selected) {
   return options.map(o => `<option value="${o}" ${o === selected ? "selected" : ""}>${o}</option>`).join("");
 }
 
+/* ---------------------------------------------------------------------
+   Vendor Name searchable combobox (HIH Carveout)
+--------------------------------------------------------------------- */
+function filterVendorNames(query) {
+  const q = query.trim().toLowerCase();
+  return q ? CARVEOUT_VENDOR_NAMES.filter(n => n.toLowerCase().includes(q)) : CARVEOUT_VENDOR_NAMES.slice();
+}
+
+function renderVendorComboList(rowId) {
+  const listEl = document.querySelector(`.vendor-combo-list[data-row-id="${rowId}"]`);
+  const inputEl = document.querySelector(`input[data-field="vendorNameSearch"][data-row-id="${rowId}"]`);
+  if (!listEl || !inputEl) return;
+  const matches = filterVendorNames(inputEl.value);
+  const itemsHtml = matches.map(n => `<li data-value="${escapeAttr(n)}">${escapeHtml(n)}</li>`).join("");
+  const noMatchHtml = matches.length === 0 ? `<li class="no-match">No matches</li>` : "";
+  listEl.innerHTML = itemsHtml + noMatchHtml + `<li class="other-option" data-value="__other__">Other…</li>`;
+  listEl.querySelectorAll("li[data-value]").forEach(li => {
+    li.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      selectVendorName(rowId, li.dataset.value);
+    });
+  });
+}
+
+function openVendorCombo(rowId) {
+  const listEl = document.querySelector(`.vendor-combo-list[data-row-id="${rowId}"]`);
+  if (!listEl) return;
+  renderVendorComboList(rowId);
+  listEl.classList.remove("hidden");
+}
+
+function closeVendorCombo(rowId) {
+  const listEl = document.querySelector(`.vendor-combo-list[data-row-id="${rowId}"]`);
+  if (listEl) listEl.classList.add("hidden");
+}
+
+function moveVendorComboHighlight(rowId, delta) {
+  const listEl = document.querySelector(`.vendor-combo-list[data-row-id="${rowId}"]`);
+  if (!listEl) return;
+  const items = Array.from(listEl.querySelectorAll("li[data-value]"));
+  if (!items.length) return;
+  const currentIndex = items.findIndex(li => li.classList.contains("active"));
+  let nextIndex = currentIndex + delta;
+  if (nextIndex < 0) nextIndex = items.length - 1;
+  if (nextIndex >= items.length) nextIndex = 0;
+  items.forEach(li => li.classList.remove("active"));
+  items[nextIndex].classList.add("active");
+  items[nextIndex].scrollIntoView({ block: "nearest" });
+}
+
+function selectVendorName(rowId, value) {
+  const row = state.rows.find(r => r.id === rowId);
+  if (!row) return;
+  if (value === "__other__") {
+    row.vendorNameOther = true;
+    row.vendorName = "";
+  } else {
+    row.vendorName = value;
+  }
+  render();
+  checkDuplicateAndRemove(rowId);
+  if (value === "__other__") {
+    const manualInput = document.querySelector(`input[data-field="vendorNameManual"][data-row-id="${rowId}"]`);
+    if (manualInput) manualInput.focus();
+  }
+}
+
 function renderForm() {
   const rowsHtml = state.rows.map((r, i) => rowHtml(r, i)).join("");
 
@@ -420,8 +567,8 @@ function rowsTableHeadHtml() {
         <th style="width:13%">Payment Type</th>
         <th style="width:14%">Vendor Name</th>
         <th style="width:11%">CNA Fee</th>
-        <th style="width:11%">PPT Fee Type</th>
         <th style="width:11%">PPT Fee Amount</th>
+        <th style="width:11%">PPT Fee Type</th>
         <th style="width:11%">Max $ Amount</th>
       </tr>
     </thead>
@@ -454,19 +601,11 @@ function rowHtml(r, i) {
         <select data-field="paymentType" data-row-id="${r.id}">${optionsHtml(payOptions, r.paymentType)}</select>
       </td>
       <td class="${err.vendorName ? "err" : ""}">
-        ${showVendorName
-          ? `<input type="text" data-field="vendorName" data-row-id="${r.id}" value="${escapeAttr(r.vendorName)}" placeholder="e.g. Healthmark">
-             ${err.vendorName ? `<span class="field-error">${err.vendorName}</span>` : ""}`
-          : `<span class="cell-empty">—</span>`}
+        ${vendorNameCellHtml(r, err)}
       </td>
       <td>
         ${showCna
           ? `<input type="number" step="0.01" min="0" data-field="cnaFee" data-row-id="${r.id}" value="${escapeAttr(r.cnaFee)}" placeholder="0.00">`
-          : `<span class="cell-empty">—</span>`}
-      </td>
-      <td>
-        ${showFeeType
-          ? `<select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOptions, r.feeType)}</select>`
           : `<span class="cell-empty">—</span>`}
       </td>
       <td class="${err.amount ? "err" : ""}">
@@ -476,11 +615,40 @@ function rowHtml(r, i) {
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
+        ${showFeeType
+          ? `<select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOptions, r.feeType)}</select>`
+          : `<span class="cell-empty">—</span>`}
+      </td>
+      <td>
         ${showMax
           ? `<input type="number" step="0.01" min="0" data-field="maxAmount" data-row-id="${r.id}" value="${escapeAttr(r.maxAmount)}" placeholder="0.00">`
           : `<span class="cell-empty">—</span>`}
       </td>
     </tr>
+  `;
+}
+
+function vendorNameCellHtml(r, err) {
+  if (!hasVendorNameField(r.vendorType)) return `<span class="cell-empty">—</span>`;
+
+  if (r.vendorNameOther) {
+    return `
+      <div class="vendor-combo">
+        <input type="text" data-field="vendorNameManual" data-row-id="${r.id}" value="${escapeAttr(r.vendorName)}" placeholder="Enter vendor name">
+        <button type="button" class="link-btn" data-action="vendorNameUseList" data-row-id="${r.id}">Use list instead</button>
+      </div>
+      ${err.vendorName ? `<span class="field-error">${err.vendorName}</span>` : ""}
+    `;
+  }
+
+  return `
+    <div class="vendor-combo">
+      <input type="text" autocomplete="off" class="${r.vendorName ? "has-clear" : ""}" data-field="vendorNameSearch" data-row-id="${r.id}"
+             value="${escapeAttr(r.vendorName)}" placeholder="Type to search…">
+      ${r.vendorName ? `<button type="button" class="vendor-clear-btn" data-action="vendorNameClear" data-row-id="${r.id}" title="Clear vendor">×</button>` : ""}
+      <ul class="vendor-combo-list hidden" data-row-id="${r.id}"></ul>
+    </div>
+    ${err.vendorName ? `<span class="field-error">${err.vendorName}</span>` : ""}
   `;
 }
 
@@ -495,7 +663,7 @@ function assumptionsHtml() {
         <li>A row is flagged as a duplicate (alert shown immediately, row auto-removed, and blocked on Review) if another row shares the same Vendor Type/Name, Payment Type, and PPT Fee Type — or, separately, if two rows share the same Vendor Name at all, regardless of Payment Type or PPT Fee Type.</li>
         <li>Checking "Approval required for all per page fees" removes Per Page from the PPT Fee Type options and resets any existing Per Page rows to Per Chart, since a per-row Per Page amount can no longer be entered.</li>
         <li>When Payment Type = Exclusion, PPT Fee Type/Amount/CNA Fee/Max $ Amount are all hidden — an excluded vendor doesn't need a fee type, just the "not approved" flag.</li>
-        <li>Vendor Name is free text (HIH vendor table doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
+        <li>Vendor Name is an alphabetical dropdown of known HIH Carveout vendors (list provided by Christine) — only shown when Vendor Type = HIH Carveout. A hardcoded list stands in for the real HIH vendor table (doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
         <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
       </ul>
     </details>
@@ -543,7 +711,7 @@ function attachFormListeners() {
       if (field === "vendorType") {
         const allowed = paymentTypeOptions(row.vendorType);
         if (!allowed.includes(row.paymentType)) row.paymentType = "Pre+Post Pay";
-        if (!hasVendorNameField(row.vendorType)) row.vendorName = "";
+        if (!hasVendorNameField(row.vendorType)) { row.vendorName = ""; row.vendorNameOther = false; }
         if (!hasCnaField(row.vendorType)) row.cnaFee = "";
       }
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
@@ -553,19 +721,76 @@ function attachFormListeners() {
     });
   });
 
-  document.querySelectorAll("input[data-field]").forEach(inp => {
+  function refreshPreview() {
+    const previewEl = document.getElementById("previewText");
+    const text = buildFeeText();
+    previewEl.textContent = text || "Enter fee details to preview…";
+    previewEl.classList.toggle("empty-warn", !text);
+  }
+
+  document.querySelectorAll('input[data-field]:not([data-field="vendorNameSearch"]):not([data-field="vendorNameManual"])').forEach(inp => {
     inp.addEventListener("input", () => {
       const row = state.rows.find(r => r.id === Number(inp.dataset.rowId));
       row[inp.dataset.field] = inp.value;
-      const previewEl = document.getElementById("previewText");
-      const text = buildFeeText();
-      previewEl.textContent = text || "Enter fee details to preview…";
-      previewEl.classList.toggle("empty-warn", !text);
+      refreshPreview();
     });
   });
 
-  document.querySelectorAll('input[data-field="vendorName"]').forEach(inp => {
+  document.querySelectorAll('input[data-field="vendorNameManual"]').forEach(inp => {
+    inp.addEventListener("input", () => {
+      const row = state.rows.find(r => r.id === Number(inp.dataset.rowId));
+      row.vendorName = inp.value;
+      refreshPreview();
+    });
     inp.addEventListener("change", () => checkDuplicateAndRemove(Number(inp.dataset.rowId)));
+  });
+
+  document.querySelectorAll('[data-action="vendorNameUseList"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const row = state.rows.find(r => r.id === Number(btn.dataset.rowId));
+      if (row) { row.vendorNameOther = false; row.vendorName = ""; }
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-action="vendorNameClear"]').forEach(btn => {
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener("click", () => {
+      const rowId = Number(btn.dataset.rowId);
+      const row = state.rows.find(r => r.id === rowId);
+      if (row) row.vendorName = "";
+      render();
+      const inp = document.querySelector(`input[data-field="vendorNameSearch"][data-row-id="${rowId}"]`);
+      if (inp) inp.focus();
+    });
+  });
+
+  document.querySelectorAll('input[data-field="vendorNameSearch"]').forEach(inp => {
+    const rowId = Number(inp.dataset.rowId);
+    inp.addEventListener("focus", () => openVendorCombo(rowId));
+    inp.addEventListener("input", () => renderVendorComboList(rowId));
+    inp.addEventListener("blur", () => {
+      setTimeout(() => {
+        closeVendorCombo(rowId);
+        const row = state.rows.find(r => r.id === rowId);
+        if (row) inp.value = row.vendorName;
+      }, 150);
+    });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { inp.blur(); return; }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        moveVendorComboHighlight(rowId, e.key === "ArrowDown" ? 1 : -1);
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const listEl = document.querySelector(`.vendor-combo-list[data-row-id="${rowId}"]`);
+        if (!listEl) return;
+        const active = listEl.querySelector("li.active[data-value]") || listEl.querySelector("li[data-value]");
+        if (active) selectVendorName(rowId, active.dataset.value);
+      }
+    });
   });
 
   document.getElementById("reviewBtn").addEventListener("click", () => {
@@ -767,6 +992,36 @@ function escapeHtml(str) {
 }
 function escapeAttr(str) { return escapeHtml(str); }
 
+/* ---------------------------------------------------------------------
+   Password gate (prototype access control only — not real security;
+   password is visible in this file's source)
+--------------------------------------------------------------------- */
+const PROTO_PASSWORD = "mango";
+const PROTO_AUTH_KEY = "pptFeeProtoAuth";
+
+function initPasswordGate() {
+  const gate = document.getElementById("pwGate");
+  if (sessionStorage.getItem(PROTO_AUTH_KEY) === "1") {
+    gate.classList.add("hidden");
+    return;
+  }
+  const form = document.getElementById("pwForm");
+  const input = document.getElementById("pwInput");
+  const error = document.getElementById("pwError");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (input.value === PROTO_PASSWORD) {
+      sessionStorage.setItem(PROTO_AUTH_KEY, "1");
+      gate.classList.add("hidden");
+    } else {
+      error.textContent = "Incorrect password.";
+      input.value = "";
+      input.focus();
+    }
+  });
+}
+
+initPasswordGate();
 render();
 </script>
 </body>
