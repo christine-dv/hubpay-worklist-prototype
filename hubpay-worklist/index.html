@@ -2307,6 +2307,7 @@ function getTimeframeAnchor(tableId) {
 
 function matchesTimeframe(tableId, row, timeframeValue) {
   if (!timeframeDateCols[tableId] || !timeframeValue) return true;
+  if (timeframeValue === '>1 Year') return true; // "everything" — no upper bound, unfiltered
   const text = getRowTimeframeDateText(tableId, row);
   if (!text) return true; // no date to compare — don't exclude
   const rowDate = new Date(text);
@@ -2318,7 +2319,6 @@ function matchesTimeframe(tableId, row, timeframeValue) {
     case '30 Days':  return diffDays >= 0 && diffDays <= 30;
     case '90 Days':  return diffDays >= 0 && diffDays <= 90;
     case '1 Year':   return diffDays >= 0 && diffDays <= 365;
-    case '>1 Year':  return diffDays > 365;
     default:         return true;
   }
 }
