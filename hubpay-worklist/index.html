@@ -1226,7 +1226,6 @@
           <button class="btn-secondary" data-dropdown="dd-review-actions">Actions ▾</button>
           <div id="dd-review-actions" class="dropdown-menu">
             <button class="dropdown-item disabled" data-action="send-for-payment" data-page-id="review">Send for Payment</button>
-            <button class="dropdown-item disabled" data-action="cc-sent-for-payment" data-page-id="review">CC Sent for Payment</button>
           </div>
         </div>
 
@@ -1487,7 +1486,7 @@
             <label class="filter-option"><input type="radio" name="timeframe-pending" value="30 Days"> 30 Days</label>
             <label class="filter-option"><input type="radio" name="timeframe-pending" value="90 Days"> 90 Days</label>
             <label class="filter-option"><input type="radio" name="timeframe-pending" value="1 Year"> 1 Year</label>
-            <label class="filter-option"><input type="radio" name="timeframe-pending" value=">1 Year"> Greater Than 1 Year</label>
+            <label class="filter-option"><input type="radio" name="timeframe-pending" value="All"> All</label>
           </div>
         </div>
         <div class="filter-wrapper">
@@ -1746,7 +1745,7 @@
             <label class="filter-option"><input type="radio" name="timeframe-complete" value="30 Days"> 30 Days</label>
             <label class="filter-option"><input type="radio" name="timeframe-complete" value="90 Days"> 90 Days</label>
             <label class="filter-option"><input type="radio" name="timeframe-complete" value="1 Year"> 1 Year</label>
-            <label class="filter-option"><input type="radio" name="timeframe-complete" value=">1 Year"> Greater Than 1 Year</label>
+            <label class="filter-option"><input type="radio" name="timeframe-complete" value="All"> All</label>
           </div>
         </div>
         <div class="filter-wrapper">
@@ -2307,7 +2306,7 @@ function getTimeframeAnchor(tableId) {
 
 function matchesTimeframe(tableId, row, timeframeValue) {
   if (!timeframeDateCols[tableId] || !timeframeValue) return true;
-  if (timeframeValue === '>1 Year') return true; // "everything" — no upper bound, unfiltered
+  if (timeframeValue === 'All') return true; // "everything" — no upper bound, unfiltered
   const text = getRowTimeframeDateText(tableId, row);
   if (!text) return true; // no date to compare — don't exclude
   const rowDate = new Date(text);
@@ -2760,11 +2759,25 @@ function syncHeaderCb(tableId) {
 // ACTIONS: Send for Payment
 // ═══════════════════════════════════════════════════════════
 
-async function handleSendForPayment(sourceTableId) {
+async function handleSendForPayment(sourceTableId, pageId) {
   const selected = getSelectedRows(sourceTableId);
   if (selected.length === 0) return;
 
-  // Split into CC (route to Review) and non-CC (route to Complete)
+  // On Review, invoices (CC, At-Loss, or Research) have already been through in-house
+  // handling. Send for Payment submits them all to Complete regardless of payment method —
+  // there is no separate CC Sent for Payment action.
+  if (pageId === 'review') {
+    const confirmed = await showModal(
+      'Send for Payment',
+      `Send ${selected.length} invoice(s) for payment?`
+    );
+    if (!confirmed) return;
+    moveRowsToComplete(selected, sourceTableId);
+    showToast(`${selected.length} invoice(s) sent for payment`);
+    return;
+  }
+
+  // New / Action Needed: split into CC (route to Review) and non-CC (route to Complete)
   const ccRows = selected.filter(r => r.dataset.paymentMethod === 'Credit Card' && r.dataset.ccEmail === 'true');
   const payRows = selected.filter(r => !(r.dataset.paymentMethod === 'Credit Card' && r.dataset.ccEmail === 'true'));
 
@@ -2824,29 +2837,6 @@ async function handleSendToSupervisor(sourceTableId) {
   if (!confirmed) return;
   moveRowsToReview(selected, sourceTableId);
   showToast(`Invoice(s) sent to Review`);
-}
-
-// ═══════════════════════════════════════════════════════════
-// ACTIONS: CC Sent for Payment (Review page only)
-// ═══════════════════════════════════════════════════════════
-
-async function handleCCSentForPayment() {
-  const selected = getSelectedRows('tbl-review');
-  if (selected.length === 0) return;
-
-  const nonCC = selected.filter(r => r.dataset.paymentMethod !== 'Credit Card');
-  if (nonCC.length > 0) {
-    showToast('CC Sent for Payment is only available for Credit Card invoices', 'error');
-    return;
-  }
-
-  const confirmed = await showModal(
-    'CC Sent for Payment',
-    `Mark ${selected.length} Credit Card invoice(s) as sent for payment?`
-  );
-  if (!confirmed) return;
-  moveRowsToComplete(selected, 'tbl-review');
-  showToast(`${selected.length} CC invoice(s) sent for payment`);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2912,11 +2902,9 @@ document.querySelectorAll('.dropdown-item[data-action]').forEach(item => {
     const tableId = tableMap[pageId];
 
     if (action === 'send-for-payment') {
-      await handleSendForPayment(tableId);
+      await handleSendForPayment(tableId, pageId);
     } else if (action === 'send-to-supervisor') {
       await handleSendToSupervisor(tableId);
-    } else if (action === 'cc-sent-for-payment') {
-      await handleCCSentForPayment();
     } else {
       protoAlert();
     }
