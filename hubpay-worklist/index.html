@@ -367,6 +367,57 @@
     margin-bottom: 6px;
   }
 
+  /* ── PAGINATION ── */
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #6b7280;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .page-size-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .page-size-select {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 12px;
+    color: #374151;
+    background: #fff;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .page-btn {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+  }
+  .page-btn:hover:not(:disabled) { background: #f9fafb; }
+  .page-btn:disabled { color: #cbd5e1; cursor: not-allowed; }
+
+  .page-indicator {
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
   /* ── TABLE ── */
   .table-wrapper {
     overflow-x: auto;
@@ -920,6 +971,23 @@
           </tbody>
         </table>
       </div>
+
+      <div class="pagination-bar" data-paginate-table="tbl-new">
+        <div class="page-size-row">
+          Rows per page:
+          <select class="page-size-select">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="pagination-controls">
+          <button class="page-btn page-prev">‹ Prev</button>
+          <span class="page-indicator">Page 1 of 1</span>
+          <button class="page-btn page-next">Next ›</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1125,6 +1193,23 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="pagination-bar" data-paginate-table="tbl-action">
+        <div class="page-size-row">
+          Rows per page:
+          <select class="page-size-select">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="pagination-controls">
+          <button class="page-btn page-prev">‹ Prev</button>
+          <span class="page-indicator">Page 1 of 1</span>
+          <button class="page-btn page-next">Next ›</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1353,6 +1438,23 @@
           </tbody>
         </table>
       </div>
+
+      <div class="pagination-bar" data-paginate-table="tbl-review">
+        <div class="page-size-row">
+          Rows per page:
+          <select class="page-size-select">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="pagination-controls">
+          <button class="page-btn page-prev">‹ Prev</button>
+          <span class="page-indicator">Page 1 of 1</span>
+          <button class="page-btn page-next">Next ›</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1373,7 +1475,21 @@
         </div>
       </div>
 
-      <div class="filters-row" data-filter-table="tbl-pending">
+      <div class="filters-row" data-filter-table="tbl-pending" data-timeframe="Today">
+        <div class="filter-wrapper">
+          <button class="filter-chip active" data-filter-key="timeframe">Timeframe: Today <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="timeframe">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Timeframe</span>
+              <button class="filter-clear-btn timeframe-reset-btn">Reset to Today</button>
+            </div>
+            <label class="filter-option"><input type="radio" name="timeframe-pending" value="Today" checked> Today</label>
+            <label class="filter-option"><input type="radio" name="timeframe-pending" value="30 Days"> 30 Days</label>
+            <label class="filter-option"><input type="radio" name="timeframe-pending" value="90 Days"> 90 Days</label>
+            <label class="filter-option"><input type="radio" name="timeframe-pending" value="1 Year"> 1 Year</label>
+            <label class="filter-option"><input type="radio" name="timeframe-pending" value=">1 Year"> Greater Than 1 Year</label>
+          </div>
+        </div>
         <div class="filter-wrapper">
           <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
           <div class="filter-dropdown" data-filter-key="global">
@@ -1455,7 +1571,8 @@
             data-col-project="9"
             data-col-payment-method="8"
             data-col-vendor-invoice="12"
-            data-col-payee-name="14">
+            data-col-payee-name="14"
+            data-col-last-updated="4">
             <tr data-global="False" data-payment-method="ACH" data-project="Linda Nelson DDS MRA" data-escalation-reason="Outside Payment Terms">
               <td><input type="checkbox"></td>
               <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
@@ -1573,6 +1690,23 @@
           </tbody>
         </table>
       </div>
+
+      <div class="pagination-bar" data-paginate-table="tbl-pending">
+        <div class="page-size-row">
+          Rows per page:
+          <select class="page-size-select">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="pagination-controls">
+          <button class="page-btn page-prev">‹ Prev</button>
+          <span class="page-indicator">Page 1 of 1</span>
+          <button class="page-btn page-next">Next ›</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1600,7 +1734,21 @@
         </div>
       </div>
 
-      <div class="filters-row" data-filter-table="tbl-complete">
+      <div class="filters-row" data-filter-table="tbl-complete" data-timeframe="Today">
+        <div class="filter-wrapper">
+          <button class="filter-chip active" data-filter-key="timeframe">Timeframe: Today <span class="filter-chevron">▾</span></button>
+          <div class="filter-dropdown" data-filter-key="timeframe">
+            <div class="filter-dropdown-header">
+              <span class="filter-dropdown-title">Timeframe</span>
+              <button class="filter-clear-btn timeframe-reset-btn">Reset to Today</button>
+            </div>
+            <label class="filter-option"><input type="radio" name="timeframe-complete" value="Today" checked> Today</label>
+            <label class="filter-option"><input type="radio" name="timeframe-complete" value="30 Days"> 30 Days</label>
+            <label class="filter-option"><input type="radio" name="timeframe-complete" value="90 Days"> 90 Days</label>
+            <label class="filter-option"><input type="radio" name="timeframe-complete" value="1 Year"> 1 Year</label>
+            <label class="filter-option"><input type="radio" name="timeframe-complete" value=">1 Year"> Greater Than 1 Year</label>
+          </div>
+        </div>
         <div class="filter-wrapper">
           <button class="filter-chip" data-filter-key="global">Global <span class="filter-chevron">▾</span></button>
           <div class="filter-dropdown" data-filter-key="global">
@@ -1693,7 +1841,9 @@
             data-col-last-updated-by="18"
             data-col-status="3"
             data-col-vendor-invoice="7"
-            data-col-payee-name="14">
+            data-col-payee-name="14"
+            data-col-payment-date="5"
+            data-col-received-at="2">
             <tr data-global="False" data-payment-method="ACH" data-project="Linda Nelson DDS MRA" data-last-updated-by="a.carter@datavant.com" data-status="Paid">
               <td><input type="checkbox"></td>
               <td><button class="icon-btn" onclick="protoAlert()">👁</button></td>
@@ -1828,6 +1978,23 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="pagination-bar" data-paginate-table="tbl-complete">
+        <div class="page-size-row">
+          Rows per page:
+          <select class="page-size-select">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="pagination-controls">
+          <button class="page-btn page-prev">‹ Prev</button>
+          <span class="page-indicator">Page 1 of 1</span>
+          <button class="page-btn page-next">Next ›</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2002,7 +2169,7 @@ document.querySelectorAll('.dropdown-menu').forEach(menu => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// FILTER DROPDOWNS (multi-select)
+// FILTER DROPDOWNS (multi-select) + TIMEFRAME (single-select) + PAGINATION
 // ═══════════════════════════════════════════════════════════
 
 function closeAllFilterDropdowns() {
@@ -2027,8 +2194,8 @@ document.querySelectorAll('.filter-dropdown').forEach(dd => {
   dd.addEventListener('click', e => e.stopPropagation());
 });
 
-// Clear button per filter
-document.querySelectorAll('.filter-clear-btn').forEach(btn => {
+// Clear button per multi-select filter (checkbox-based)
+document.querySelectorAll('.filter-dropdown:not([data-filter-key="timeframe"]) .filter-clear-btn').forEach(btn => {
   btn.addEventListener('click', e => {
     e.stopPropagation();
     const dropdown = btn.closest('.filter-dropdown');
@@ -2050,12 +2217,41 @@ document.querySelectorAll('.filter-dropdown input[type="checkbox"]').forEach(cb 
   });
 });
 
-// Collect active filter selections for a given filters-row
+// ── TIMEFRAME (single-select, Pending + Complete only; default Today) ──
+document.querySelectorAll('.filter-dropdown[data-filter-key="timeframe"] input[type="radio"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const dropdown = radio.closest('.filter-dropdown');
+    const wrapper = dropdown.closest('.filter-wrapper');
+    const chip = wrapper.querySelector('.filter-chip');
+    chip.innerHTML = `Timeframe: ${radio.value} <span class="filter-chevron">▾</span>`;
+    chip.classList.add('active');
+    const filtersRow = wrapper.closest('.filters-row');
+    filtersRow.dataset.timeframe = radio.value;
+    const tableId = filtersRow.getAttribute('data-filter-table');
+    applyAllFilters(tableId, filtersRow);
+  });
+});
+
+// "Reset to Today" acts as this filter's Clear — Timeframe always has a value, never an unfiltered state
+document.querySelectorAll('.timeframe-reset-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const dropdown = btn.closest('.filter-dropdown');
+    const todayRadio = dropdown.querySelector('input[type="radio"][value="Today"]');
+    if (todayRadio && !todayRadio.checked) {
+      todayRadio.checked = true;
+      todayRadio.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+// Collect active multi-select filter selections for a given filters-row
 function getActiveFilters(filtersRow) {
   const filters = {};
   filtersRow.querySelectorAll('.filter-wrapper').forEach(wrapper => {
     const dropdown = wrapper.querySelector('.filter-dropdown');
     const key = dropdown.getAttribute('data-filter-key');
+    if (key === 'timeframe') return; // handled separately, single-select
     const checked = [...dropdown.querySelectorAll('input[type="checkbox"]:checked')].map(c => c.value);
     if (checked.length > 0) filters[key] = checked;
   });
@@ -2074,6 +2270,59 @@ const filterKeyToDataAttr = {
   'status': 'status',
 };
 
+// Tables that carry a Timeframe filter, and which visible column to read the date from
+// (payment-date falls back to received-at when Payment Date is "—", e.g. Sent for Payment rows)
+const timeframeDateCols = {
+  'tbl-pending': { primary: 'data-col-last-updated' },
+  'tbl-complete': { primary: 'data-col-payment-date', fallback: 'data-col-received-at' },
+};
+
+function getRowTimeframeDateText(tableId, row) {
+  const tbody = document.getElementById(tableId);
+  const cols = timeframeDateCols[tableId];
+  if (!tbody || !cols) return null;
+  const cells = row.querySelectorAll('td');
+  const primaryIdx = parseInt(tbody.getAttribute(cols.primary) || '-1', 10);
+  let text = primaryIdx >= 0 && cells[primaryIdx] ? cells[primaryIdx].textContent.trim() : '';
+  if ((!text || text === '—') && cols.fallback) {
+    const fallbackIdx = parseInt(tbody.getAttribute(cols.fallback) || '-1', 10);
+    text = fallbackIdx >= 0 && cells[fallbackIdx] ? cells[fallbackIdx].textContent.trim() : '';
+  }
+  return (text && text !== '—') ? text : null;
+}
+
+// Anchor "today" to the most recent in-scope date present in the table, not the viewer's
+// real calendar date — keeps the demo data meaningful regardless of when it's viewed.
+function getTimeframeAnchor(tableId) {
+  const tbody = document.getElementById(tableId);
+  let max = null;
+  tbody.querySelectorAll('tr').forEach(row => {
+    const text = getRowTimeframeDateText(tableId, row);
+    if (!text) return;
+    const d = new Date(text);
+    if (!isNaN(d) && (!max || d > max)) max = d;
+  });
+  return max || new Date();
+}
+
+function matchesTimeframe(tableId, row, timeframeValue) {
+  if (!timeframeDateCols[tableId] || !timeframeValue) return true;
+  const text = getRowTimeframeDateText(tableId, row);
+  if (!text) return true; // no date to compare — don't exclude
+  const rowDate = new Date(text);
+  if (isNaN(rowDate)) return true;
+  const anchor = getTimeframeAnchor(tableId);
+  const diffDays = Math.floor((anchor - rowDate) / 86400000);
+  switch (timeframeValue) {
+    case 'Today':    return diffDays === 0;
+    case '30 Days':  return diffDays >= 0 && diffDays <= 30;
+    case '90 Days':  return diffDays >= 0 && diffDays <= 90;
+    case '1 Year':   return diffDays >= 0 && diffDays <= 365;
+    case '>1 Year':  return diffDays > 365;
+    default:         return true;
+  }
+}
+
 function applyFiltersForDropdown(dropdown) {
   const filtersRow = dropdown.closest('.filters-row');
   if (!filtersRow) return;
@@ -2082,57 +2331,133 @@ function applyFiltersForDropdown(dropdown) {
   applyAllFilters(tableId, filtersRow);
 }
 
-function applyAllFilters(tableId, filtersRow) {
+// Rows matching current filters + search + timeframe, independent of pagination
+function getMatchingRows(tableId, filtersRow) {
   const tbody = document.getElementById(tableId);
-  if (!tbody) return;
-  const activeFilters = getActiveFilters(filtersRow);
+  if (!tbody) return [];
+  const activeFilters = filtersRow ? getActiveFilters(filtersRow) : {};
+  const timeframeValue = filtersRow ? filtersRow.dataset.timeframe : null;
 
-  // Also get search term for this table
   const pageEl = tbody.closest('.page');
   const searchRow = pageEl ? pageEl.querySelector('.search-row') : null;
   const searchTerm = searchRow ? searchRow.querySelector('.search-input').value.toLowerCase().trim() : '';
+  const vendorInvoiceCol = parseInt(tbody.getAttribute('data-col-vendor-invoice') || '0', 10);
+  const payeeNameCol = parseInt(tbody.getAttribute('data-col-payee-name') || '0', 10);
 
-  let visible = 0;
-  tbody.querySelectorAll('tr').forEach(row => {
-    let show = true;
-
-    // Apply each filter (AND logic)
+  return [...tbody.querySelectorAll('tr')].filter(row => {
     for (const [key, values] of Object.entries(activeFilters)) {
       const attr = filterKeyToDataAttr[key];
       if (!attr) continue;
       const rowVal = row.dataset[attr] || '';
-      if (!values.includes(rowVal)) { show = false; break; }
+      if (!values.includes(rowVal)) return false;
     }
 
-    // Apply search
-    if (show && searchTerm) {
-      const vendorInvoiceCol = parseInt(tbody.getAttribute('data-col-vendor-invoice') || '0');
-      const payeeNameCol = parseInt(tbody.getAttribute('data-col-payee-name') || '0');
+    if (!matchesTimeframe(tableId, row, timeframeValue)) return false;
+
+    if (searchTerm) {
       const cells = row.querySelectorAll('td');
       const invoiceText = cells[vendorInvoiceCol] ? cells[vendorInvoiceCol].textContent.toLowerCase() : '';
       const payeeText = cells[payeeNameCol] ? cells[payeeNameCol].textContent.toLowerCase() : '';
-      if (!invoiceText.includes(searchTerm) && !payeeText.includes(searchTerm)) show = false;
+      if (!invoiceText.includes(searchTerm) && !payeeText.includes(searchTerm)) return false;
     }
 
-    row.style.display = show ? '' : 'none';
-    if (show) visible++;
+    return true;
   });
-
-  // Update showing count
-  updateShowingCount(tableId, visible);
 }
 
-function updateShowingCount(tableId, visible) {
+// ── PAGINATION STATE ──
+const PAGE_SIZE_DEFAULT = 25;
+const paginationState = {};
+['tbl-new', 'tbl-action', 'tbl-review', 'tbl-pending', 'tbl-complete'].forEach(id => {
+  paginationState[id] = { page: 1, size: PAGE_SIZE_DEFAULT };
+});
+
+function applyAllFilters(tableId, filtersRow) {
+  const state = paginationState[tableId] || (paginationState[tableId] = { page: 1, size: PAGE_SIZE_DEFAULT });
+  state.page = 1; // any filter/search/timeframe change returns to page 1
+  renderTablePage(tableId, filtersRow);
+}
+
+function renderTablePage(tableId, filtersRow) {
+  const tbody = document.getElementById(tableId);
+  if (!tbody) return;
+  const matching = getMatchingRows(tableId, filtersRow);
+  const state = paginationState[tableId] || (paginationState[tableId] = { page: 1, size: PAGE_SIZE_DEFAULT });
+  const totalPages = Math.max(1, Math.ceil(matching.length / state.size));
+  if (state.page > totalPages) state.page = totalPages;
+
+  const start = (state.page - 1) * state.size;
+  const pageRows = matching.slice(start, start + state.size);
+  const pageRowSet = new Set(pageRows);
+
+  tbody.querySelectorAll('tr').forEach(row => {
+    row.style.display = pageRowSet.has(row) ? '' : 'none';
+  });
+
+  updateShowingCount(tableId, matching.length, start, pageRows.length);
+  updatePaginationControls(tableId, state, totalPages);
+}
+
+function updateShowingCount(tableId, totalMatched, start = 0, pageCount = null) {
   const suffixMap = { 'tbl-new': 'new', 'tbl-action': 'action', 'tbl-review': 'review', 'tbl-pending': 'pending', 'tbl-complete': 'complete' };
   const suffix = suffixMap[tableId];
   if (!suffix) return;
   const el = document.getElementById('showing-' + suffix);
-  if (el) {
-    const tbody = document.getElementById(tableId);
-    const total = tbody.querySelectorAll('tr').length;
-    el.textContent = `Showing ${visible} of ${total} items`;
-  }
+  if (!el) return;
+  if (totalMatched === 0) { el.textContent = 'Showing 0 of 0 items'; return; }
+  const count = pageCount != null ? pageCount : totalMatched;
+  el.textContent = `Showing ${start + 1} to ${start + count} of ${totalMatched} items`;
 }
+
+function updatePaginationControls(tableId, state, totalPages) {
+  const bar = document.querySelector(`.pagination-bar[data-paginate-table="${tableId}"]`);
+  if (!bar) return;
+  const prevBtn = bar.querySelector('.page-prev');
+  const nextBtn = bar.querySelector('.page-next');
+  const indicator = bar.querySelector('.page-indicator');
+  if (prevBtn) prevBtn.disabled = state.page <= 1;
+  if (nextBtn) nextBtn.disabled = state.page >= totalPages;
+  if (indicator) indicator.textContent = `Page ${state.page} of ${totalPages}`;
+}
+
+document.querySelectorAll('.pagination-bar').forEach(bar => {
+  const tableId = bar.getAttribute('data-paginate-table');
+  const sizeSelect = bar.querySelector('.page-size-select');
+  const prevBtn = bar.querySelector('.page-prev');
+  const nextBtn = bar.querySelector('.page-next');
+
+  function currentFiltersRow() {
+    const tbody = document.getElementById(tableId);
+    const pageEl = tbody ? tbody.closest('.page') : null;
+    return pageEl ? pageEl.querySelector('.filters-row') : null;
+  }
+
+  sizeSelect.addEventListener('change', () => {
+    const state = paginationState[tableId] || (paginationState[tableId] = { page: 1, size: PAGE_SIZE_DEFAULT });
+    state.size = parseInt(sizeSelect.value, 10);
+    state.page = 1;
+    renderTablePage(tableId, currentFiltersRow());
+  });
+
+  prevBtn.addEventListener('click', () => {
+    const state = paginationState[tableId];
+    if (state.page > 1) {
+      state.page--;
+      renderTablePage(tableId, currentFiltersRow());
+    }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    const state = paginationState[tableId];
+    const filtersRow = currentFiltersRow();
+    const matching = getMatchingRows(tableId, filtersRow);
+    const totalPages = Math.max(1, Math.ceil(matching.length / state.size));
+    if (state.page < totalPages) {
+      state.page++;
+      renderTablePage(tableId, filtersRow);
+    }
+  });
+});
 
 // Populate dynamic filter options (Project, Created By, Last Updated By, Status)
 // called after page load and after rows change
@@ -2184,10 +2509,13 @@ function populateDynamicFilters(tableId) {
   });
 }
 
-// Init dynamic filters for all tables
+// Init dynamic filters + first render for all tables
 ['tbl-new', 'tbl-action', 'tbl-review', 'tbl-pending', 'tbl-complete'].forEach(id => {
   populateDynamicFilters(id);
-  updateShowingCount(id, document.getElementById(id) ? document.getElementById(id).querySelectorAll('tr').length : 0);
+  const tbody = document.getElementById(id);
+  const pageEl = tbody ? tbody.closest('.page') : null;
+  const filtersRow = pageEl ? pageEl.querySelector('.filters-row') : null;
+  renderTablePage(id, filtersRow);
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -2595,13 +2923,6 @@ document.querySelectorAll('.dropdown-item[data-action]').forEach(item => {
   });
 });
 
-// ═══════════════════════════════════════════════════════════
-// INIT showing counts
-// ═══════════════════════════════════════════════════════════
-['tbl-new', 'tbl-action', 'tbl-review', 'tbl-pending', 'tbl-complete'].forEach(id => {
-  const tbody = document.getElementById(id);
-  if (tbody) updateShowingCount(id, tbody.querySelectorAll('tr').length);
-});
 </script>
 </body>
 </html>
