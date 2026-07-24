@@ -198,6 +198,14 @@
 --------------------------------------------------------------------- */
 const VENDOR_TYPES = ["Provider/Hospital", "General HIH", "HIH Carveout"];
 const FEE_TYPES = ["Per Chart", "Per Page"];
+
+function paymentTypeOptions(vendorType) {
+  if (vendorType === "HIH Carveout") {
+    return ["Pre+Post Pay", "Prepay Only", "Postpay Only", "Exclusion"];
+  }
+  return ["Pre+Post Pay", "Prepay Only", "Postpay Only"];
+}
+
 const CARVEOUT_VENDOR_NAMES = [
   "Advantmed", "Al Imaging", "AMS", "Better Instant", "BHS", "Care Consultants",
   "Chartpro", "Chartrequest", "CHM", "Copy Cat", "Copy Mate", "Copy Med",
@@ -208,13 +216,6 @@ const CARVEOUT_VENDOR_NAMES = [
   "Recordquest", "Scanstat", "Scanning Sherpas", "Sharecare", "Summit Retrieval",
   "Total Document Access", "Verisma", "VRC", "Westside Medical"
 ].sort((a, b) => a.localeCompare(b));
-
-function paymentTypeOptions(vendorType) {
-  if (vendorType === "HIH Carveout") {
-    return ["Pre+Post Pay", "Post Pay Only", "Exclusion"];
-  }
-  return ["Pre+Post Pay", "Post Pay Only"];
-}
 
 let rowSeq = 1;
 function newRow() {
@@ -229,10 +230,6 @@ function newRow() {
     cnaFee: "",
     maxAmount: ""
   };
-}
-
-function hasCnaField(vendorType) {
-  return true;
 }
 
 const state = {
@@ -255,6 +252,15 @@ function fmtAmount(n) {
   return "$" + rounded.toFixed(2);
 }
 
+function isBlankOrZero(v) {
+  return v === "" || v === null || v === undefined || isNaN(parseFloat(v)) || parseFloat(v) === 0;
+}
+
+function paymentLabel(pt) {
+  if (pt === "Pre+Post Pay") return "Pre+Postpay";
+  return pt;
+}
+
 function hasVendorNameField(vendorType) {
   return vendorType === "HIH Carveout";
 }
@@ -266,12 +272,6 @@ function vendorLabel(row) {
     case "HIH Carveout": return row.vendorName.trim() || "Unnamed Vendor";
     default: return row.vendorType;
   }
-}
-
-function paymentLabel(pt) {
-  if (pt === "Pre+Post Pay") return "Pre+Postpay";
-  if (pt === "Post Pay Only") return "Postpay Only";
-  return pt;
 }
 
 function isCarveoutName(row) { return hasVendorNameField(row.vendorType); }
@@ -287,57 +287,103 @@ function buildFeeText() {
   if (state.noPPT) return "Approval required for all PPT fees";
 
   const rowsWithVendor = state.rows.filter(r => r.vendorType);
-  const included = rowsWithVendor.filter(r => r.paymentType !== "Exclusion" && (r.amount !== "" || r.feeType));
-  const excluded = rowsWithVendor.filter(r => r.paymentType === "Exclusion");
+  const included = rowsWithVendor.filter(r => r.paymentType !== "Exclusion");
+  const excludedRows = rowsWithVendor.filter(r => r.paymentType === "Exclusion");
 
-  function isBlankOrZero(v) {
-    return v === "" || v === null || v === undefined || isNaN(parseFloat(v)) || parseFloat(v) === 0;
-  }
-
-  // Step A: group rows by vendor identity (vendorType+vendorName+paymentType), collect fees
-  // Each row can contribute a primary fee (Per Chart/Per Page) and/or a CNA fee.
-  const vendorMap = new Map();
+  // Step A: group included rows into "cells" keyed by vendor identity + Fee Type. A cell
+  // normally holds a single row (one Payment Type), but may hold exactly two: a Prepay Only
+  // row paired with a Postpay Only row for the same vendor + Fee Type — the one sanctioned
+  // way to have distinct prepay/postpay amounts, since it's rare and shouldn't require
+  // re-entering everything twice.
+  const cellMap = new Map();
   included.forEach(r => {
-    const cnaAmt = hasCnaField(r.vendorType) ? r.cnaFee : "";
     const hasPrimary = !isBlankOrZero(r.amount);
-    const hasCna = !isBlankOrZero(cnaAmt);
+    const hasCna = !isBlankOrZero(r.cnaFee);
     if (!hasPrimary && !hasCna) return; // nothing entered yet, skip from preview
 
-    const key = r.vendorType + "|" + (isCarveoutName(r) ? r.vendorName.trim() : "") + "|" + r.paymentType;
-    if (!vendorMap.has(key)) {
-      vendorMap.set(key, { vendorType: r.vendorType, vendorName: r.vendorName, paymentType: r.paymentType, fees: {} });
-    }
-    const entry = vendorMap.get(key);
+    let amountStr = "";
     if (hasPrimary) {
-      let feeStr = fmtAmount(r.amount);
+      amountStr = fmtAmount(r.amount);
       if (r.feeType === "Per Page") {
-        feeStr += "pp";
-        if (!isBlankOrZero(r.maxAmount)) feeStr += ` (max ${fmtAmount(r.maxAmount)})`;
+        amountStr += "pp";
+        if (!isBlankOrZero(r.maxAmount)) amountStr += ` (max ${fmtAmount(r.maxAmount)})`;
       }
-      entry.fees[r.feeType] = feeStr;
     }
-    if (hasCna) {
-      entry.fees.CNA = fmtAmount(cnaAmt);
+    const cnaStr = hasCna ? fmtAmount(r.cnaFee) : "";
+
+    const cellKey = r.vendorType + "|" + (isCarveoutName(r) ? r.vendorName.trim() : "") + "||" + r.feeType;
+    if (!cellMap.has(cellKey)) {
+      cellMap.set(cellKey, { vendorType: r.vendorType, vendorName: r.vendorName, feeType: r.feeType, byType: {} });
     }
+    cellMap.get(cellKey).byType[r.paymentType] = { amountStr, cnaStr };
   });
 
-  const FEE_ORDER = ["Per Chart", "Per Page", "CNA"];
+  // Step B: render each cell to one line. A Prepay Only + Postpay Only pair merges into a
+  // single self-describing line rather than two separate segments.
+  const globalModes = new Set();
+  const renderedCells = Array.from(cellMap.values()).map(cell => {
+    const types = Object.keys(cell.byType);
+    let mode, label, amountStr, cnaStr;
+    if (types.length === 2 && types.includes("Prepay Only") && types.includes("Postpay Only")) {
+      const pre = cell.byType["Prepay Only"];
+      const post = cell.byType["Postpay Only"];
+      mode = "splitPair";
+      label = "";
+      const amtParts = [];
+      if (pre.amountStr) amtParts.push(`Prepay ${pre.amountStr}`);
+      if (post.amountStr) amtParts.push(`Postpay ${post.amountStr}`);
+      amountStr = amtParts.join(", ");
+      if (pre.cnaStr && post.cnaStr) cnaStr = `CNA Prepay ${pre.cnaStr}, Postpay ${post.cnaStr}`;
+      else if (pre.cnaStr) cnaStr = `CNA Prepay Only ${pre.cnaStr}`;
+      else if (post.cnaStr) cnaStr = `CNA Postpay Only ${post.cnaStr}`;
+      else cnaStr = "";
+    } else {
+      const pt = types[0];
+      const entry = cell.byType[pt];
+      mode = pt;
+      label = paymentLabel(pt);
+      amountStr = entry.amountStr;
+      cnaStr = entry.cnaStr ? `CNA ${entry.cnaStr}` : "";
+    }
+    if (amountStr) globalModes.add(mode);
+    return { vendorType: cell.vendorType, vendorName: cell.vendorName, feeType: cell.feeType, mode, label, amountStr, cnaStr };
+  });
+
+  // Only when every line in the whole schedule shares one Payment Type mode (and that mode
+  // isn't the Prepay/Postpay split pair, which has no single label) do we hoist it to a
+  // shared prefix.
+  const useSharedPrefix = globalModes.size === 1 && !globalModes.has("splitPair");
+
+  // Merge cells back into per-vendor entries, keyed just by vendor identity, carrying up
+  // to one Per Chart line and one Per Page line.
+  const vendorMap = new Map();
+  renderedCells.forEach(c => {
+    const key = c.vendorType + "|" + (c.vendorType === "HIH Carveout" ? c.vendorName.trim() : "");
+    if (!vendorMap.has(key)) vendorMap.set(key, { vendorType: c.vendorType, vendorName: c.vendorName, lines: {} });
+    vendorMap.get(key).lines[c.feeType] = c;
+  });
+
+  const FEE_ORDER = ["Per Chart", "Per Page"];
   const vendorGroups = Array.from(vendorMap.values()).map(v => {
     const parts = [];
     FEE_ORDER.forEach(ft => {
-      if (v.fees[ft] === undefined) return;
-      parts.push(ft === "CNA" ? `CNA ${v.fees[ft]}` : v.fees[ft]);
+      const line = v.lines[ft];
+      if (!line) return;
+      const segs = [];
+      if (line.amountStr) segs.push(useSharedPrefix || !line.label ? line.amountStr : `${line.label} ${line.amountStr}`);
+      if (line.cnaStr) segs.push(line.cnaStr);
+      if (segs.length) parts.push(segs.join(", "));
     });
-    return { vendorType: v.vendorType, vendorName: v.vendorName, paymentType: v.paymentType, feesString: parts.join(", ") };
+    return { vendorType: v.vendorType, vendorName: v.vendorName, feesString: parts.join(", ") };
   });
 
-  // Step C: merge vendor groups that share identical (paymentType, feesString)
+  // Step C: merge vendor groups that share an identical feesString
   const mergeMap = new Map();
   const mergeOrder = [];
   vendorGroups.forEach(g => {
-    const key = g.paymentType + "||" + g.feesString;
+    const key = g.feesString;
     if (!mergeMap.has(key)) {
-      mergeMap.set(key, { paymentType: g.paymentType, feesString: g.feesString, labels: [] });
+      mergeMap.set(key, { feesString: g.feesString, labels: [] });
       mergeOrder.push(key);
     }
     mergeMap.get(key).labels.push({
@@ -358,7 +404,6 @@ function buildFeeText() {
       combined += (prev.isCarveout && lbl.isCarveout) ? ", " + lbl.text : "+" + lbl.text;
     });
     return {
-      paymentType: g.paymentType,
       feesString: g.feesString,
       vendorLabel: combined,
       rank: Math.min(...sortedLabels.map(l => l.rank)),
@@ -371,23 +416,22 @@ function buildFeeText() {
     .map((g, i) => ({ ...g, i }))
     .sort((a, b) => a.rank - b.rank || a.sortName.localeCompare(b.sortName) || a.i - b.i);
 
-  // Step D: always lead with the payment type when every group shares one
+  // Step D: lead with the shared Payment Type label once if every line in the schedule shares one
   let nonExclusionSegments = [];
-  const uniquePaymentTypes = new Set(mergedGroups.map(g => g.paymentType));
-  if (mergedGroups.length && uniquePaymentTypes.size === 1) {
-    const label = paymentLabel(mergedGroups[0].paymentType);
+  if (useSharedPrefix && mergedGroups.length) {
+    const label = paymentLabel([...globalModes][0]);
     const groupStrs = mergedGroups.map(g => `${g.vendorLabel} ${g.feesString}`.trim());
     nonExclusionSegments.push([label, ...groupStrs].join(" | "));
   } else {
     mergedGroups.forEach(g => {
-      nonExclusionSegments.push(`${g.vendorLabel} ${paymentLabel(g.paymentType)} ${g.feesString}`.trim());
+      nonExclusionSegments.push(`${g.vendorLabel} ${g.feesString}`.trim());
     });
   }
 
   // Step E: exclusions
   const excludedLabels = [];
   const seenExcl = new Set();
-  excluded.forEach(r => {
+  excludedRows.forEach(r => {
     const lbl = vendorLabel(r);
     if (!seenExcl.has(lbl)) { seenExcl.add(lbl); excludedLabels.push(lbl); }
   });
@@ -578,12 +622,11 @@ function rowsTableHeadHtml() {
 function rowHtml(r, i) {
   const err = state.errors[r.id] || {};
   const payOptions = paymentTypeOptions(r.vendorType);
-  const feeTypeOptions = state.approvalRequiredPerPage ? FEE_TYPES.filter(ft => ft !== "Per Page") : FEE_TYPES;
-  const showVendorName = hasVendorNameField(r.vendorType);
+  const feeTypeOpts = state.approvalRequiredPerPage ? FEE_TYPES.filter(ft => ft !== "Per Page") : FEE_TYPES;
   const showFeeType = r.paymentType !== "Exclusion";
   const showAmount = r.paymentType !== "Exclusion";
   const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
-  const showCna = hasCnaField(r.vendorType) && r.paymentType !== "Exclusion";
+  const showCna = r.paymentType !== "Exclusion";
 
   return `
     <tr data-row-id="${r.id}">
@@ -616,7 +659,7 @@ function rowHtml(r, i) {
       </td>
       <td>
         ${showFeeType
-          ? `<select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOptions, r.feeType)}</select>`
+          ? `<select data-field="feeType" data-row-id="${r.id}">${optionsHtml(feeTypeOpts, r.feeType)}</select>`
           : `<span class="cell-empty">—</span>`}
       </td>
       <td>
@@ -657,10 +700,11 @@ function assumptionsHtml() {
     <details class="assumptions">
       <summary>Prototype notes &amp; assumptions</summary>
       <ul>
-        <li>Fee Text Preview formula was reverse-engineered from sample strings provided; it is not yet confirmed against a formal spec ("Requirement 3"). Logic: the schedule's shared Payment Type always leads the string; Provider/Hospital groups are ordered before HIH-related groups; vendor labels combine with “+” across Vendor Types and “,” across HIH Carveout vendor names; Per Page fees get a trailing "pp" (e.g. "$1pp"); CNA fees are labeled "CNA $X"; blank or $0 amounts are omitted entirely; Exclusion rows roll up into a trailing "Not approved for …" clause.</li>
-        <li>CNA Fee is its own column (rather than a Fee Type option) on every row when Payment Type isn't Exclusion — a single row now captures both the primary fee and the CNA fee, no duplicate row needed.</li>
-        <li>Vendor Type is Provider/Hospital, General HIH, or HIH Carveout (Exception removed per feedback; Provider/Physician and Hospital merged into one option).</li>
-        <li>A row is flagged as a duplicate (alert shown immediately, row auto-removed, and blocked on Review) if another row shares the same Vendor Type/Name, Payment Type, and PPT Fee Type — or, separately, if two rows share the same Vendor Name at all, regardless of Payment Type or PPT Fee Type.</li>
+        <li>Payment Type is Pre+Post Pay, Prepay Only, or Postpay Only (plus Exclusion for HIH Carveout). A given Vendor Type/Name + Fee Type combination normally has exactly one row. The one exception: it may instead have exactly two rows — one Prepay Only and one Postpay Only — since it's rare for prepay and postpay fees to actually differ, and this avoids forcing everyone to re-enter the same info twice just to cover that edge case. A Prepay Only + Postpay Only pair renders as one merged line (e.g. "Prepay $10, Postpay $20") rather than two separate segments.</li>
+        <li>Fee Text Preview formula: when every fee line in the whole schedule shares one Payment Type (all Pre+Postpay, all Prepay Only, or all Postpay Only), that label leads the string once; otherwise each vendor group states its own type inline (a merged Prepay Only + Postpay Only pair has no single label, since it's already self-describing). Provider/Hospital groups are ordered before HIH-related groups; vendor labels combine with "+" across Vendor Types and "," across HIH Carveout vendor names; Per Page fees get a trailing "pp" (e.g. "$1pp"); CNA fees are labeled "CNA $X"; blank or $0 amounts are omitted entirely; Exclusion rows roll up into a trailing "Not approved for …" clause. Not yet confirmed against a formal spec — treat as reverse-engineered from sample strings.</li>
+        <li>CNA Fee is its own column (rather than a Fee Type option) on every row when Payment Type isn't Exclusion — a single row captures both the primary fee and the CNA fee.</li>
+        <li>Vendor Type is Provider/Hospital, General HIH, or HIH Carveout.</li>
+        <li>Duplicate/conflict rules, checked live per row and again as a full-form gate on Review: (1) two rows can't share the same Vendor Type/Name, Payment Type, and Fee Type — exact duplicate. (2) For a given Vendor Type/Name + Fee Type, the only Payment Types allowed to coexist are Prepay Only + Postpay Only — any other pairing (e.g. Pre+Post Pay alongside Prepay Only) is blocked. (3) An Exclusion row for a given Vendor Name can't coexist with any other row for that same vendor.</li>
         <li>Checking "Approval required for all per page fees" removes Per Page from the PPT Fee Type options and resets any existing Per Page rows to Per Chart, since a per-row Per Page amount can no longer be entered.</li>
         <li>When Payment Type = Exclusion, PPT Fee Type/Amount/CNA Fee/Max $ Amount are all hidden — an excluded vendor doesn't need a fee type, just the "not approved" flag.</li>
         <li>Vendor Name is an alphabetical dropdown of known HIH Carveout vendors (list provided by Christine) — only shown when Vendor Type = HIH Carveout. A hardcoded list stands in for the real HIH vendor table (doesn't exist yet — owned by Ivy Deng / HIH Ops).</li>
@@ -712,12 +756,14 @@ function attachFormListeners() {
         const allowed = paymentTypeOptions(row.vendorType);
         if (!allowed.includes(row.paymentType)) row.paymentType = "Pre+Post Pay";
         if (!hasVendorNameField(row.vendorType)) { row.vendorName = ""; row.vendorNameOther = false; }
-        if (!hasCnaField(row.vendorType)) row.cnaFee = "";
       }
       if (field === "feeType" && row.feeType !== "Per Page") row.maxAmount = "";
       if (field === "paymentType" && row.paymentType === "Exclusion") { row.amount = ""; row.maxAmount = ""; row.cnaFee = ""; row.feeType = "Per Chart"; }
       render();
-      if (field === "vendorType" || field === "paymentType" || field === "feeType") checkDuplicateAndRemove(row.id);
+      // Duplicate/compat checks wait until Payment Type has actually been selected — running
+      // them right on Vendor Type change would compare rows before the user has told us
+      // enough to say whether they conflict (e.g. Payment Type still sitting at its default).
+      if (field === "paymentType" || field === "feeType") checkDuplicateAndRemove(row.id);
     });
   });
 
@@ -795,7 +841,7 @@ function attachFormListeners() {
 
   document.getElementById("reviewBtn").addEventListener("click", () => {
     if (!state.noPPT && hasDuplicateRows()) {
-      alert("Duplicate row detected: two or more rows have the same Vendor Type/Name, Payment Type, and PPT Fee Type. Please remove or adjust the duplicate before continuing.");
+      alert("Duplicate or incompatible rows detected: check for repeated Vendor Type/Name + Payment Type + Fee Type combinations, incompatible Payment Types on the same Vendor + Fee Type (only Prepay Only + Postpay Only may pair), or an Exclusion row combined with another row for the same vendor. Please remove or adjust before continuing.");
       return;
     }
     if (state.noPPT || validateRows()) {
@@ -807,45 +853,102 @@ function attachFormListeners() {
   });
 }
 
+// Exact-duplicate key: same vendor identity, same Payment Type, same Fee Type.
 function rowKey(r) {
   const vendorKey = r.vendorType + (hasVendorNameField(r.vendorType) ? "|" + r.vendorName.trim().toLowerCase() : "");
   const feeTypeKey = r.paymentType === "Exclusion" ? "" : r.feeType;
   return vendorKey + "||" + r.paymentType + "||" + feeTypeKey;
 }
 
+// Cell key: same vendor identity + Fee Type, ignoring Payment Type — used to check which
+// Payment Types are allowed to coexist for that vendor/Fee Type combination.
+function cellKeyOf(r) {
+  const vendorKey = r.vendorType + (hasVendorNameField(r.vendorType) ? "|" + r.vendorName.trim().toLowerCase() : "");
+  const feeTypeKey = r.paymentType === "Exclusion" ? "" : r.feeType;
+  return vendorKey + "||" + feeTypeKey;
+}
+
 function vendorNameOf(r) {
   return hasVendorNameField(r.vendorType) ? r.vendorName.trim().toLowerCase() : "";
 }
 
+// A cell (one vendor + Fee Type) may carry one Payment Type, or exactly the Prepay Only +
+// Postpay Only pair — any other combination of 2+ distinct Payment Types is disallowed.
+function paymentTypesCompatible(types) {
+  const s = new Set(types);
+  if (s.size <= 1) return true;
+  if (s.size === 2) return s.has("Prepay Only") && s.has("Postpay Only");
+  return false;
+}
+
 function hasDuplicateRows() {
   const seenKeys = new Set();
-  const seenNames = new Set();
+  const cellGroups = new Map();
+  const nameGroups = new Map();
   for (const r of state.rows) {
     if (!r.vendorType) continue; // no vendor picked yet — nothing to compare
+    // HIH Carveout identity is the selected vendor name — until one is chosen, this row
+    // isn't a real vendor yet and shouldn't be compared against anything.
+    if (hasVendorNameField(r.vendorType) && !r.vendorName.trim()) continue;
     const key = rowKey(r);
     if (seenKeys.has(key)) return true;
     seenKeys.add(key);
+
+    const cKey = cellKeyOf(r);
+    const cArr = cellGroups.get(cKey) || [];
+    cArr.push(r.paymentType);
+    cellGroups.set(cKey, cArr);
+
     const name = vendorNameOf(r);
     if (name) {
-      if (seenNames.has(name)) return true;
-      seenNames.add(name);
+      const nArr = nameGroups.get(name) || [];
+      nArr.push(r.paymentType);
+      nameGroups.set(name, nArr);
     }
+  }
+  for (const types of cellGroups.values()) {
+    if (!paymentTypesCompatible(types)) return true;
+  }
+  for (const types of nameGroups.values()) {
+    if (types.includes("Exclusion") && types.length > 1) return true;
   }
   return false;
 }
 
-// Returns "combo" if another row shares Vendor Type/Name+Payment Type+Fee Type,
-// "name" if another row (any Payment/Fee Type) already uses the same Vendor Name, or null.
+// Returns "combo" (exact duplicate), "cell" (incompatible Payment Types on the same
+// vendor + Fee Type), "name" (an Exclusion row conflicting with another row for the same
+// vendor name), or null.
 function findConflict(rowId) {
   const target = state.rows.find(r => r.id === rowId);
   if (!target || !target.vendorType) return null;
+  // HIH Carveout identity is the selected vendor name — until one is chosen, there's
+  // nothing yet to compare this row against.
+  if (hasVendorNameField(target.vendorType) && !target.vendorName.trim()) return null;
+
+  const comparable = (r) => r.id !== rowId && r.vendorType && !(hasVendorNameField(r.vendorType) && !r.vendorName.trim());
+
   const key = rowKey(target);
-  const name = vendorNameOf(target);
   for (const r of state.rows) {
-    if (r.id === rowId || !r.vendorType) continue;
+    if (!comparable(r)) continue;
     if (rowKey(r) === key) return "combo";
-    if (name && vendorNameOf(r) === name) return "name";
   }
+
+  const cKey = cellKeyOf(target);
+  const cellTypes = state.rows
+    .filter(r => comparable(r) && cellKeyOf(r) === cKey)
+    .map(r => r.paymentType)
+    .concat(target.paymentType);
+  if (!paymentTypesCompatible(cellTypes)) return "cell";
+
+  const name = vendorNameOf(target);
+  if (name) {
+    const nameTypes = state.rows
+      .filter(r => comparable(r) && vendorNameOf(r) === name)
+      .map(r => r.paymentType)
+      .concat(target.paymentType);
+    if (nameTypes.includes("Exclusion") && nameTypes.length > 1) return "name";
+  }
+
   return null;
 }
 
@@ -854,9 +957,11 @@ function checkDuplicateAndRemove(rowId) {
   const conflict = findConflict(rowId);
   if (!conflict) return;
   if (conflict === "combo") {
-    alert("Duplicate row: another row already has this Vendor Type/Name, Payment Type, and PPT Fee Type. This row will be removed.");
+    alert("Duplicate row: another row already has this Vendor Type/Name, Payment Type, and Fee Type. This row will be removed.");
+  } else if (conflict === "cell") {
+    alert("Incompatible Payment Type: for this Vendor Type/Name and Fee Type, only a Prepay Only + Postpay Only pair may coexist — not this combination. This row will be removed.");
   } else {
-    alert("Duplicate vendor name: another row already uses this Vendor Name. This row will be removed.");
+    alert("Duplicate vendor name: an Exclusion row for this Vendor Name can't coexist with another row. This row will be removed.");
   }
   state.rows = state.rows.filter(r => r.id !== rowId);
   delete state.errors[rowId];
@@ -868,7 +973,7 @@ function reviewRowHtml(r) {
   const showFeeType = r.paymentType !== "Exclusion";
   const showAmount = r.paymentType !== "Exclusion";
   const showMax = r.feeType === "Per Page" && r.paymentType !== "Exclusion";
-  const showCna = hasCnaField(r.vendorType) && r.paymentType !== "Exclusion";
+  const showCna = r.paymentType !== "Exclusion";
 
   const cell = (shown, value) => shown
     ? `<span class="ro-value">${value !== "" && value !== null && value !== undefined ? escapeHtml(value) : "—"}</span>`
