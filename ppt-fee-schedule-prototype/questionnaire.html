@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPT Fee Schedule — Questionnaire Prototype</title>
+<style>
+  :root {
+    --ink: #1a1d23;
+    --sub: #5b6270;
+    --line: #dfe3e8;
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --accent: #2f5fd8;
+    --accent-dark: #1f45a8;
+    --danger: #c53030;
+    --good: #1c7c3f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+  header.top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 4px; flex-wrap: wrap; gap: 8px;
+  }
+  header.top h1 { font-size: 19px; margin: 0; }
+  .order-tag { font-size: 12px; color: var(--sub); }
+  .proto-badge {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .03em;
+    color: var(--accent-dark); background: #e8edfb; border: 1px solid #c7d3f5;
+    padding: 2px 8px; border-radius: 100px; text-transform: uppercase;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 24px; margin-top: 16px;
+  }
+
+  .progress-steps { display: flex; gap: 6px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .progress-steps .step {
+    font-size: 11px; padding: 4px 10px; border-radius: 100px; background: #eef1f6; color: var(--sub);
+  }
+  .progress-steps .step.active { background: var(--accent); color: #fff; font-weight: 700; }
+  .progress-steps .step.done { background: #e4f5ea; color: var(--good); }
+
+  .qcard-context { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+  .qcard-title { font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+
+  .help-text {
+    font-size: 12.5px; color: var(--sub); background: #f7f8fa; border-left: 3px solid #c7d3f5;
+    padding: 9px 12px; border-radius: 4px; margin: 0 0 18px;
+  }
+
+  .choice-btn {
+    display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 10px;
+    border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font-size: 14.5px;
+    font-weight: 600; cursor: pointer; color: var(--ink);
+  }
+  .choice-btn:hover { border-color: var(--accent); background: #f0f4fd; }
+  .choice-btn .sub { display: block; font-weight: 400; font-size: 12px; color: var(--sub); margin-top: 3px; }
+
+  .amount-field { margin-bottom: 16px; }
+  .amount-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+  .amount-field input {
+    width: 100%; max-width: 220px; padding: 9px 10px; font-size: 14px; border: 1px solid #c7cdd6;
+    border-radius: 7px; background: #fff; color: var(--ink);
+  }
+  .amount-field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .field-error { color: var(--danger); font-size: 11.5px; margin-top: 4px; display: block; }
+  .amount-field.err input { border-color: var(--danger); }
+
+  .recap-card { background: #fafbfc; border: 1px solid var(--line); border-radius: 8px; padding: 6px 16px; margin: 14px 0 18px; }
+  .recap-row { display: flex; justify-content: space-between; gap: 14px; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #eef0f3; }
+  .recap-row:last-child { border-bottom: none; }
+  .recap-row .k { color: var(--sub); }
+  .recap-row .v { font-weight: 600; text-align: right; }
+
+  .nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; gap: 10px; }
+  .nav-row .spacer { flex: 1; }
+  button.primary {
+    background: var(--accent); color: #fff; border: none; padding: 10px 20px; font-size: 14px;
+    font-weight: 600; border-radius: 7px; cursor: pointer;
+  }
+  button.primary:hover { background: var(--accent-dark); }
+  button.primary:disabled { background: #b7c3e8; cursor: not-allowed; }
+  button.secondary {
+    background: #fff; color: var(--ink); border: 1px solid #c7cdd6; padding: 10px 18px; font-size: 14px;
+    font-weight: 600; border-radius: 7px; cursor: pointer;
+  }
+  button.secondary:hover { background: #f0f2f5; }
+  button.ghost {
+    background: none; color: var(--sub); border: none; padding: 10px 4px; font-size: 13px;
+    cursor: pointer; text-decoration: underline;
+  }
+
+  .preview-box { margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .preview-box .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .03em; font-weight: 600;
+    color: var(--sub); background: #f0f2f5; padding: 7px 12px; border-bottom: 1px solid var(--line);
+  }
+  .preview-box .text {
+    padding: 12px 14px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px;
+    background: #fbfcfd; word-break: break-word; min-height: 20px;
+  }
+
+  .review-section { margin-bottom: 18px; }
+  .review-section h3 { font-size: 13px; margin: 0 0 6px; color: var(--sub); text-transform: uppercase; letter-spacing: .03em; }
+  .review-edit { font-size: 12px; }
+
+  .help-box { background: #f0f4fd; border: 1px solid #c7d3f5; border-radius: 8px; padding: 16px 18px; font-size: 14px; }
+  .help-box code { background: #e2e8fa; padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+
+  .confirm-box { text-align: center; padding: 30px 10px; }
+  .confirm-box .check {
+    width: 52px; height: 52px; border-radius: 50%; background: #e4f5ea; color: var(--good);
+    display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 14px;
+  }
+
+  .assumptions {
+    margin-top: 22px; font-size: 12px; color: var(--sub); border-top: 1px solid var(--line); padding-top: 14px;
+  }
+  .assumptions summary { cursor: pointer; font-weight: 600; color: var(--sub); }
+  .assumptions ul { margin: 8px 0 0; padding-left: 18px; }
+  .assumptions li { margin-bottom: 4px; }
+
+  .pw-gate {
+    position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center;
+    justify-content: center; z-index: 100;
+  }
+  .pw-gate.hidden { display: none; }
+  .pw-box {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 28px 30px;
+    width: 280px; box-shadow: 0 8px 24px rgba(20, 25, 40, 0.10); display: flex; flex-direction: column; gap: 10px;
+  }
+  .pw-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .pw-sub { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+  .pw-input { padding: 8px 10px; font-size: 14px; border: 1px solid #c7cdd6; border-radius: 6px; color: var(--ink); }
+  .pw-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .pw-submit { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .pw-submit:hover { background: var(--accent-dark); }
+  .pw-error { color: var(--danger); font-size: 12px; min-height: 14px; }
+</style>
+</head>
+<body>
+<div class="pw-gate" id="pwGate">
+  <form class="pw-box" id="pwForm">
+    <div class="pw-title">PPT Fee Schedule — Questionnaire</div>
+    <div class="pw-sub">Enter password to continue</div>
+    <input type="password" id="pwInput" class="pw-input" placeholder="Password" autocomplete="off" autofocus>
+    <button type="submit" class="pw-submit">Unlock</button>
+    <div class="pw-error" id="pwError"></div>
+  </form>
+</div>
+<div class="wrap" id="app"></div>
+
+<script>
+/* =======================================================================
+   This is a QUESTIONNAIRE version of the PPT Fee Schedule prototype.
+   Same underlying data model and fee-text output logic as the data-entry
+   form prototype (index.html) — reused verbatim below — but CS answers
+   one guided question at a time instead of filling out a table. Goal:
+   fewer mistakes (wrong field combos, skipped fees, incompatible rows)
+   by only ever asking one decision at a time, with inline help text,
+   and a confirm-as-you-go recap after each vendor type.
+======================================================================= */
+
+const CARVEOUT_VENDOR_NAMES = [
+  "Advantmed", "Al Imaging", "AMS", "Better Instant", "BHS", "Care Consultants",
+  "Chartpro", "Chartrequest", "CHM", "Copy Cat", "Copy Mate", "Copy Med",
+  "Data Dimensions", "Datafied", "Datalink", "Diversified DMRS", "Document Access",
+  "GRM", "Gulf Coast", "Healthcare Technologies", "Healthmark", "HIMQS", "IBS",
+  "Iron Mtn", "Lexa", "Medical Docs", "Medical Records Now", "Medicopy", "Medrec",
+  "Medrecs", "MMRA", "Morgan Records", "Mr P Copy", "MRO", "Noble", "Recordconnect",
+  "Recordquest", "Scanstat", "Scanning Sherpas", "Sharecare", "Summit Retrieval",
+  "Total Document Access", "Verisma", "VRC", "Westside Medical"
+].sort((a, b) => a.localeCompare(b));
+
+const KIND_META = {
+  ph: { vendorType: "Provider/Hospital", label: "Provider/Hospital", nextMajor: "hih_doesPay" },
+  hih: { vendorType: "General HIH", label: "General HIH", nextMajor: "carveout_gate" }
+};
+
+function newEntity() {
+  return {
+    doesPay: null,
+    sameRate: null,
+    amount: "", prepay: "", postpay: "",
+    hasCna: null, cnaFee: "",
+    feeType: "Per Chart",
+    hasMax: null, maxAmount: ""
+  };
+}
+
+function newCarveout() {
+  return { type: null, vendorName: "", ...newEntity() };
+}
+
+const state = {
+  stage: "intro",
+  history: [],
+  noPPT: null,
+  perPageApproval: null,
+  ph: newEntity(),
+  hih: newEntity(),
+  hasCarveouts: null,
+  carveouts: [],
+  currentCarveout: null,
+  // derived, recomputed before every preview/build:
+  rows: [],
+  approvalRequiredPerPage: false
+};
+
+function kindFromStage(s) { return s.split("_")[0]; }
+function getEntity(kind) { return kind === "carveout" ? state.currentCarveout : state[kind]; }
+function vendorTypeOf(kind) { return kind === "carveout" ? "HIH Carveout" : KIND_META[kind].vendorType; }
+function entityLabel(kind) {
+  if (kind === "carveout") return state.currentCarveout.vendorName.trim() || "this vendor";
+  return KIND_META[kind].label;
+}
+
+/* ---------------------------------------------------------------------
+   Fee text preview formula — identical logic to the data-entry prototype,
+   operating on state.rows / state.noPPT / state.approvalRequiredPerPage.
+   Kept unchanged so both prototypes produce the same output for the
+   same underlying answers.
+--------------------------------------------------------------------- */
+function fmtAmount(n) {
+  const num = parseFloat(n);
+  if (isNaN(num)) return "$0";
+  const rounded = Math.round(num * 100) / 100;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return "$" + Math.round(rounded);
+  return "$" + rounded.toFixed(2);
+}
+function isBlankOrZero(v) {
+  return v === "" || v === null || v === undefined || isNaN(parseFloat(v)) || parseFloat(v) === 0;
+}
+function paymentLabel(pt) {
+  if (pt === "Pre+Post Pay") return "Pre+Postpay";
+  return pt;
+}
+function hasVendorNameField(vendorType) { return vendorType === "HIH Carveout"; }
+function vendorLabel(row) {
+  switch (row.vendorType) {
+    case "Provider/Hospital": return "Prov";
+    case "General HIH": return "HIH";
+    case "HIH Carveout": return row.vendorName.trim() || "Unnamed Vendor";
+    default: return row.vendorType;
+  }
+}
+function isCarveoutName(row) { return hasVendorNameField(row.vendorType); }
+function vendorRank(vendorType) {
+  if (vendorType === "Provider/Hospital") return 0;
+  if (vendorType === "General HIH") return 1;
+  return 2;
+}
+
+function buildFeeText() {
+  if (state.noPPT) return "Approval required for all PPT fees";
+
+  const rowsWithVendor = state.rows.filter(r => r.vendorType);
+  const included = rowsWithVendor.filter(r => r.paymentType !== "Exclusion");
+  const excludedRows = rowsWithVendor.filter(r => r.paymentType === "Exclusion");
+
+  const cellMap = new Map();
+  included.forEach(r => {
+    const hasPrimary = !isBlankOrZero(r.amount);
+    const hasCna = !isBlankOrZero(r.cnaFee);
+    if (!hasPrimary && !hasCna) return;
+
+    let amountStr = "";
+    if (hasPrimary) {
+      amountStr = fmtAmount(r.amount);
+      if (r.feeType === "Per Page") {
+        amountStr += "pp";
+        if (!isBlankOrZero(r.maxAmount)) amountStr += ` (max ${fmtAmount(r.maxAmount)})`;
+      }
+    }
+    const cnaStr = hasCna ? fmtAmount(r.cnaFee) : "";
+
+    const cellKey = r.vendorType + "|" + (isCarveoutName(r) ? r.vendorName.trim() : "") + "||" + r.feeType;
+    if (!cellMap.has(cellKey)) {
+      cellMap.set(cellKey, { vendorType: r.vendorType, vendorName: r.vendorName, feeType: r.feeType, byType: {} });
+    }
+    cellMap.get(cellKey).byType[r.paymentType] = { amountStr, cnaStr };
+  });
+
+  const globalModes = new Set();
+  const renderedCells = Array.from(cellMap.values()).map(cell => {
+    const types = Object.keys(cell.byType);
+    let mode, label, amountStr, cnaStr;
+    if (types.length === 2 && types.includes("Prepay Only") && types.includes("Postpay Only")) {
+      const pre = cell.byType["Prepay Only"];
+      const post = cell.byType["Postpay Only"];
+      mode = "splitPair";
+      label = "";
+      const amtParts = [];
+      if (pre.amountStr) amtParts.push(`Prepay ${pre.amountStr}`);
+      if (post.amountStr) amtParts.push(`Postpay ${post.amountStr}`);
+      amountStr = amtParts.join(", ");
+      if (pre.cnaStr && post.cnaStr) cnaStr = `CNA Prepay ${pre.cnaStr}, Postpay ${post.cnaStr}`;
+      else if (pre.cnaStr) cnaStr = `CNA Prepay Only ${pre.cnaStr}`;
+      else if (post.cnaStr) cnaStr = `CNA Postpay Only ${post.cnaStr}`;
+      else cnaStr = "";
+    } else {
+      const pt = types[0];
+      const entry = cell.byType[pt];
+      mode = pt;
+      label = paymentLabel(pt);
+      amountStr = entry.amountStr;
+      cnaStr = entry.cnaStr ? `CNA ${entry.cnaStr}` : "";
+    }
+    if (amountStr) globalModes.add(mode);
+    return { vendorType: cell.vendorType, vendorName: cell.vendorName, feeType: cell.feeType, mode, label, amountStr, cnaStr };
+  });
+
+  const useSharedPrefix = globalModes.size === 1 && !globalModes.has("splitPair");
+
+  const vendorMap = new Map();
+  renderedCells.forEach(c => {
+    const key = c.vendorType + "|" + (c.vendorType === "HIH Carveout" ? c.vendorName.trim() : "");
+    if (!vendorMap.has(key)) vendorMap.set(key, { vendorType: c.vendorType, vendorName: c.vendorName, lines: {} });
+    vendorMap.get(key).lines[c.feeType] = c;
+  });
+
+  const FEE_ORDER = ["Per Chart", "Per Page"];
+  const vendorGroups = Array.from(vendorMap.values()).map(v => {
+    const parts = [];
+    FEE_ORDER.forEach(ft => {
+      const line = v.lines[ft];
+      if (!line) return;
+      const segs = [];
+      if (line.amountStr) segs.push(useSharedPrefix || !line.label ? line.amountStr : `${line.label} ${line.amountStr}`);
+      if (line.cnaStr) segs.push(line.cnaStr);
+      if (segs.length) parts.push(segs.join(", "));
+    });
+    return { vendorType: v.vendorType, vendorName: v.vendorName, feesString: parts.join(", ") };
+  });
+
+  const mergeMap = new Map();
+  const mergeOrder = [];
+  vendorGroups.forEach(g => {
+    const key = g.feesString;
+    if (!mergeMap.has(key)) { mergeMap.set(key, { feesString: g.feesString, labels: [] }); mergeOrder.push(key); }
+    mergeMap.get(key).labels.push({ text: vendorLabel(g), isCarveout: g.vendorType === "HIH Carveout", rank: vendorRank(g.vendorType) });
+  });
+
+  let mergedGroups = mergeOrder.map(k => {
+    const g = mergeMap.get(k);
+    const sortedLabels = g.labels.slice().sort((a, b) => a.rank - b.rank || a.text.localeCompare(b.text));
+    let combined = "";
+    sortedLabels.forEach((lbl, i) => {
+      if (i === 0) { combined = lbl.text; return; }
+      const prev = sortedLabels[i - 1];
+      combined += (prev.isCarveout && lbl.isCarveout) ? ", " + lbl.text : "+" + lbl.text;
+    });
+    return { feesString: g.feesString, vendorLabel: combined, rank: Math.min(...sortedLabels.map(l => l.rank)), sortName: sortedLabels[0].text };
+  });
+
+  mergedGroups = mergedGroups
+    .map((g, i) => ({ ...g, i }))
+    .sort((a, b) => a.rank - b.rank || a.sortName.localeCompare(b.sortName) || a.i - b.i);
+
+  let nonExclusionSegments = [];
+  if (useSharedPrefix && mergedGroups.length) {
+    const label = paymentLabel([...globalModes][0]);
+    const groupStrs = mergedGroups.map(g => `${g.vendorLabel} ${g.feesString}`.trim());
+    nonExclusionSegments.push([label, ...groupStrs].join(" | "));
+  } else {
+    mergedGroups.forEach(g => nonExclusionSegments.push(`${g.vendorLabel} ${g.feesString}`.trim()));
+  }
+
+  const excludedLabels = [];
+  const seenExcl = new Set();
+  excludedRows.forEach(r => {
+    const lbl = vendorLabel(r);
+    if (!seenExcl.has(lbl)) { seenExcl.add(lbl); excludedLabels.push(lbl); }
+  });
+  const exclusionSegment = excludedLabels.length ? `Not approved for ${excludedLabels.join(", ")}` : "";
+  const perPageSegment = state.approvalRequiredPerPage ? "Approval required for all per page fees" : "";
+
+  const all = [...nonExclusionSegments, exclusionSegment, perPageSegment].filter(Boolean);
+  return all.join(" | ");
+}
+
+/* ---------------------------------------------------------------------
+   Convert questionnaire answers -> rows[] the fee-text builder expects
+--------------------------------------------------------------------- */
+function entityRows(vendorType, entity, vendorName) {
+  const rows = [];
+  const cnaFee = entity.hasCna ? entity.cnaFee : "";
+  const feeType = entity.feeType || "Per Chart";
+  const maxAmount = feeType === "Per Page" && entity.hasMax ? entity.maxAmount : "";
+  if (entity.sameRate === false) {
+    rows.push({ vendorType, vendorName: vendorName || "", paymentType: "Prepay Only", feeType, amount: entity.prepay, cnaFee, maxAmount });
+    rows.push({ vendorType, vendorName: vendorName || "", paymentType: "Postpay Only", feeType, amount: entity.postpay, cnaFee, maxAmount });
+  } else {
+    rows.push({ vendorType, vendorName: vendorName || "", paymentType: "Pre+Post Pay", feeType, amount: entity.amount, cnaFee, maxAmount });
+  }
+  return rows;
+}
+
+function syncDerivedState() {
+  const rows = [];
+  if (state.ph.doesPay) rows.push(...entityRows("Provider/Hospital", state.ph, ""));
+  if (state.hih.doesPay) rows.push(...entityRows("General HIH", state.hih, ""));
+  state.carveouts.forEach(c => {
+    if (c.type === "exclusion") {
+      rows.push({ vendorType: "HIH Carveout", vendorName: c.vendorName, paymentType: "Exclusion", feeType: "Per Chart", amount: "", cnaFee: "", maxAmount: "" });
+    } else {
+      rows.push(...entityRows("HIH Carveout", c, c.vendorName));
+    }
+  });
+  rows.forEach((r, i) => r.id = i + 1);
+  state.rows = rows;
+  state.approvalRequiredPerPage = state.perPageApproval === true;
+}
+
+/* ---------------------------------------------------------------------
+   Navigation
+--------------------------------------------------------------------- */
+function goTo(stage) { state.history.push(state.stage); state.stage = stage; render(); }
+function back() {
+  if (!state.history.length) return;
+  state.stage = state.history.pop();
+  render();
+}
+
+/* ---------------------------------------------------------------------
+   Shared shell
+--------------------------------------------------------------------- */
+const app = document.getElementById("app");
+
+const SECTION_LABELS = ["Setup", "Provider/Hospital", "General HIH", "Vendor Exceptions", "Review"];
+function sectionIndex(stage) {
+  if (stage.startsWith("ph_")) return 1;
+  if (stage.startsWith("hih_")) return 2;
+  if (stage.startsWith("carveout_")) return 3;
+  if (stage === "review" || stage === "help" || stage === "confirmation") return 4;
+  return 0;
+}
+
+function progressHtml() {
+  const cur = sectionIndex(state.stage);
+  return `
+    <div class="progress-steps">
+      ${SECTION_LABELS.map((label, i) => {
+        let cls = "step";
+        if (i < cur) cls += " done";
+        else if (i === cur) cls += " active";
+        return `<span class="${cls}">${i < cur ? "✓ " : ""}${label}</span>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function headerHtml() {
+  return `
+    <header class="top">
+      <div>
+        <h1>PPT Fee Schedule</h1>
+        <div class="order-tag">Order #DV-10482 · Order Configuration · Switchboard Pipelines</div>
+      </div>
+      <span class="proto-badge">Prototype — Questionnaire</span>
+    </header>
+    ${progressHtml()}
+  `;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function escapeAttr(str) { return escapeHtml(str); }
+
+/* ---------------------------------------------------------------------
+   Render dispatch
+--------------------------------------------------------------------- */
+function render() {
+  syncDerivedState();
+  const s = state.stage;
+  if (s === "intro") return renderIntro();
+  if (s === "q_noPPT") return renderNoPPT();
+  if (s === "q_perPage") return renderPerPage();
+  if (s === "ph_doesPay" || s === "hih_doesPay") return renderDoesPay(kindFromStage(s));
+  if (s.endsWith("_structure")) return renderStructure(kindFromStage(s));
+  if (s.endsWith("_amounts")) return renderAmounts(kindFromStage(s));
+  if (s.endsWith("_cna")) return renderCna(kindFromStage(s));
+  if (s.endsWith("_feeType")) return renderFeeType(kindFromStage(s));
+  if (s.endsWith("_max")) return renderMax(kindFromStage(s));
+  if (s === "ph_confirm" || s === "hih_confirm") return renderEntityConfirm(kindFromStage(s));
+  if (s === "carveout_gate") return renderCarveoutGate();
+  if (s === "carveout_type") return renderCarveoutType();
+  if (s === "carveout_vendor") return renderCarveoutVendor();
+  if (s === "carveout_confirm") return renderCarveoutConfirm();
+  if (s === "review") return renderReview();
+  if (s === "help") return renderHelp();
+  if (s === "confirmation") return renderConfirmation();
+}
+
+function questionShell(title, helpText, bodyHtml, { showBack = true } = {}) {
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card">
+      <div class="qcard-title">${title}</div>
+      ${helpText ? `<div class="help-text">${helpText}</div>` : ""}
+      ${bodyHtml}
+    </div>
+    <div class="nav-row">
+      ${showBack ? `<button class="ghost" id="backBtn" type="button">← Back</button>` : `<span></span>`}
+    </div>
+  `;
+  const b = document.getElementById("backBtn");
+  if (b) b.addEventListener("click", back);
+}
+
+/* ---------------------------------------------------------------------
+   Intro / global setup
+--------------------------------------------------------------------- */
+function renderIntro() {
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card">
+      <div class="qcard-title">Set up the PPT fee schedule for this order</div>
+      <p style="font-size:14px;color:var(--sub);">
+        This walks you through the fee schedule one question at a time instead of a data-entry
+        form, so it's harder to skip a fee or enter an incompatible combination. It produces the
+        same fee schedule as the standard form.
+      </p>
+      <p style="font-size:14px;color:var(--sub);">Have the client's approved fee schedule on hand before you start.</p>
+    </div>
+    <div class="nav-row">
+      <span></span>
+      <button class="primary" id="startBtn" type="button">Start</button>
+    </div>
+  `;
+  document.getElementById("startBtn").addEventListener("click", () => goTo("q_noPPT"));
+}
+
+function renderNoPPT() {
+  questionShell(
+    "Is approval required for all PPT fees on this order?",
+    "Choose Yes only if the client wants every PPT fee — hospital, HIH, and any vendor exceptions — routed for approval before payment, with no pre-approved schedule at all.",
+    `
+      <button class="choice-btn" data-v="yes" type="button">Yes<span class="sub">No fees are pre-approved — everything routes for approval</span></button>
+      <button class="choice-btn" data-v="no" type="button">No<span class="sub">This order has a fee schedule to define</span></button>
+    `,
+    { showBack: false }
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    state.noPPT = btn.dataset.v === "yes";
+    if (state.noPPT) { goTo("review"); }
+    else { goTo("q_perPage"); }
+  }));
+}
+
+function renderPerPage() {
+  questionShell(
+    "Is approval required for all per page fees?",
+    "Some clients pre-approve per-chart and CNA fees but want per-page overage fees escalated individually. Choose Yes only if that applies here.",
+    `
+      <button class="choice-btn" data-v="yes" type="button">Yes<span class="sub">Per page fees always require approval — no per-page rate will be set</span></button>
+      <button class="choice-btn" data-v="no" type="button">No<span class="sub">Per page rates can be set below where they apply</span></button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    state.perPageApproval = btn.dataset.v === "yes";
+    goTo("ph_doesPay");
+  }));
+}
+
+/* ---------------------------------------------------------------------
+   Shared entity sub-flow: doesPay -> structure -> amounts -> cna
+   -> feeType -> max -> confirm      (ph, hih, and carveout share this)
+--------------------------------------------------------------------- */
+function renderDoesPay(kind) {
+  const meta = KIND_META[kind];
+  questionShell(
+    `Did the client provide a ${meta.label} approved rate?`,
+    kind === "ph"
+      ? "This covers rates the client approved for fees paid directly to hospitals and physician offices for records. If the client didn't provide one, the approved amount defaults to $0 — no fee is paid."
+      : "This covers rates the client approved for Health Information Handler (HIH) vendors generally — not a specific named vendor. Named vendor exceptions come next. If the client didn't provide one, the approved amount defaults to $0 — no fee is paid.",
+    `
+      <button class="choice-btn" data-v="yes" type="button">Yes</button>
+      <button class="choice-btn" data-v="no" type="button">No<span class="sub">No approved rate provided — defaults to $0 for ${meta.label}</span></button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    const entity = state[kind];
+    entity.doesPay = btn.dataset.v === "yes";
+    if (entity.doesPay) goTo(`${kind}_feeType`);
+    else goTo(meta.nextMajor);
+  }));
+}
+
+function renderStructure(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+  questionShell(
+    `Is the ${label} fee the same whether it's paid before or after the chart is received?`,
+    "Prepay = paid before the chart is delivered. Postpay = paid after the chart is delivered. Most fee schedules use one amount for both — only choose \"differs\" if the client's schedule actually lists separate prepay and postpay rates.",
+    `
+      <button class="choice-btn" data-v="same" type="button">Yes — one amount covers both</button>
+      <button class="choice-btn" data-v="diff" type="button">No — prepay and postpay amounts differ</button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    entity.sameRate = btn.dataset.v === "same";
+    goTo(`${kind}_amounts`);
+  }));
+}
+
+function renderAmounts(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+  const err = state._err || {};
+  const perPage = entity.feeType === "Per Page";
+  const perPageSuffix = perPage ? " per page" : "";
+  const bodyHtml = entity.sameRate
+    ? `
+      <div class="amount-field ${err.amount ? "err" : ""}">
+        <label>${label} fee amount ($)${perPageSuffix}</label>
+        <input type="number" step="0.01" min="0" id="amt" value="${escapeAttr(entity.amount)}" placeholder="0.00">
+        ${err.amount ? `<span class="field-error">${err.amount}</span>` : ""}
+      </div>
+    `
+    : `
+      <div class="amount-field ${err.prepay ? "err" : ""}">
+        <label>Prepay amount ($)${perPageSuffix} <span style="font-weight:400;color:var(--sub);">— leave blank for $0</span></label>
+        <input type="number" step="0.01" min="0" id="prepay" value="${escapeAttr(entity.prepay)}" placeholder="0.00">
+        ${err.prepay ? `<span class="field-error">${err.prepay}</span>` : ""}
+      </div>
+      <div class="amount-field ${err.postpay ? "err" : ""}">
+        <label>Postpay amount ($)${perPageSuffix} <span style="font-weight:400;color:var(--sub);">— leave blank for $0</span></label>
+        <input type="number" step="0.01" min="0" id="postpay" value="${escapeAttr(entity.postpay)}" placeholder="0.00">
+        ${err.postpay ? `<span class="field-error">${err.postpay}</span>` : ""}
+      </div>
+    `;
+  questionShell(`What's the ${label} fee amount${perPageSuffix}?`, null, bodyHtml + `
+    <button class="primary" id="continueBtn" type="button" style="margin-top:6px;">Continue</button>
+  `);
+  document.getElementById("continueBtn").addEventListener("click", () => {
+    state._err = {};
+    let ok = true;
+    if (entity.sameRate) {
+      const v = document.getElementById("amt").value;
+      entity.amount = v;
+      if (v === "" || isNaN(parseFloat(v))) { state._err.amount = "Required"; ok = false; }
+    } else {
+      // Left blank, prepay/postpay default to $0 — CS shouldn't be forced to enter an
+      // amount for a timing they're not charged for. Only flag it if something was typed
+      // and it isn't a valid number.
+      const pv = document.getElementById("prepay").value;
+      const qv = document.getElementById("postpay").value;
+      entity.prepay = pv === "" ? "0" : pv;
+      entity.postpay = qv === "" ? "0" : qv;
+      if (pv !== "" && isNaN(parseFloat(pv))) { state._err.prepay = "Enter a valid amount"; ok = false; }
+      if (qv !== "" && isNaN(parseFloat(qv))) { state._err.postpay = "Enter a valid amount"; ok = false; }
+    }
+    if (!ok) { render(); return; }
+    goTo(`${kind}_cna`);
+  });
+}
+
+function renderCna(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+  questionShell(
+    `Does ${label} get paid a CNA fee?`,
+    "CNA = Chart Not Available. Some clients pay a smaller fee when the vendor confirms a requested chart doesn't exist or can't be found, instead of a chart being delivered. CNA fees are always billed per chart, even if the primary fee above is per page.",
+    `
+      <button class="choice-btn" data-v="yes" type="button">Yes</button>
+      <button class="choice-btn" data-v="no" type="button">No</button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    entity.hasCna = btn.dataset.v === "yes";
+    if (entity.hasCna) goTo(`${kind}_cnaAmount`);
+    else { entity.cnaFee = ""; goTo(kind === "carveout" ? "carveout_confirm" : `${kind}_confirm`); }
+  }));
+}
+
+// CNA amount is a small sub-step of the _cna stage rather than its own stage name,
+// but needs its own render since it collects a number. Handle via stage suffix check.
+function isCnaAmountStage(s) { return s.endsWith("_cnaAmount"); }
+
+function renderCnaAmount(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+  const err = state._err || {};
+  questionShell(`What's the CNA fee for ${label}?`, null, `
+    <div class="amount-field ${err.cnaFee ? "err" : ""}">
+      <label>CNA fee amount ($) per chart</label>
+      <input type="number" step="0.01" min="0" id="cnaAmt" value="${escapeAttr(entity.cnaFee)}" placeholder="0.00">
+      ${err.cnaFee ? `<span class="field-error">${err.cnaFee}</span>` : ""}
+    </div>
+    <button class="primary" id="continueBtn" type="button">Continue</button>
+  `);
+  document.getElementById("continueBtn").addEventListener("click", () => {
+    const v = document.getElementById("cnaAmt").value;
+    if (v === "" || isNaN(parseFloat(v))) { state._err = { cnaFee: "Required" }; render(); return; }
+    state._err = {};
+    entity.cnaFee = v;
+    goTo(kind === "carveout" ? "carveout_confirm" : `${kind}_confirm`);
+  });
+}
+
+// Fee type is asked right after "does the client pay this at all" and before any dollar
+// amount — CS thinks in terms of "per chart" by default, so naming that up front avoids
+// them anchoring on a per-chart number and then having to re-interpret it as per-page.
+function renderFeeType(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+
+  // Order-wide "approval required for all per page fees" removes Per Page as an option
+  // entirely — skip straight through rather than asking a question with only one answer.
+  if (state.perPageApproval) {
+    entity.feeType = "Per Chart";
+    entity.hasMax = false;
+    entity.maxAmount = "";
+    goTo(`${kind}_structure`);
+    return;
+  }
+
+  questionShell(
+    `Is the ${label} fee billed per chart or per page?`,
+    "Per chart is a flat fee regardless of length. Per page is charged based on page count — pick this only if the client's schedule specifically lists a per-page rate.",
+    `
+      <button class="choice-btn" data-v="Per Chart" type="button">Per Chart</button>
+      <button class="choice-btn" data-v="Per Page" type="button">Per Page</button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    entity.feeType = btn.dataset.v;
+    if (entity.feeType === "Per Page") goTo(`${kind}_maxGate`);
+    else { entity.hasMax = false; entity.maxAmount = ""; goTo(`${kind}_structure`); }
+  }));
+}
+
+function isMaxGateStage(s) { return s.endsWith("_maxGate"); }
+function renderMaxGate(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+  questionShell(
+    `Is there a maximum dollar cap per chart for the ${label} per-page fee?`,
+    "Some per-page schedules cap the total no matter how many pages a chart has.",
+    `
+      <button class="choice-btn" data-v="yes" type="button">Yes</button>
+      <button class="choice-btn" data-v="no" type="button">No — uncapped</button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    entity.hasMax = btn.dataset.v === "yes";
+    if (entity.hasMax) goTo(`${kind}_max`);
+    else { entity.maxAmount = ""; goTo(`${kind}_structure`); }
+  }));
+}
+
+function renderMax(kind) {
+  const entity = getEntity(kind);
+  const label = entityLabel(kind);
+  const err = state._err || {};
+  questionShell(`What's the per-chart maximum for ${label}?`, null, `
+    <div class="amount-field ${err.maxAmount ? "err" : ""}">
+      <label>Max amount per chart ($)</label>
+      <input type="number" step="0.01" min="0" id="maxAmt" value="${escapeAttr(entity.maxAmount)}" placeholder="0.00">
+      ${err.maxAmount ? `<span class="field-error">${err.maxAmount}</span>` : ""}
+    </div>
+    <button class="primary" id="continueBtn" type="button">Continue</button>
+  `);
+  document.getElementById("continueBtn").addEventListener("click", () => {
+    const v = document.getElementById("maxAmt").value;
+    if (v === "" || isNaN(parseFloat(v))) { state._err = { maxAmount: "Required" }; render(); return; }
+    state._err = {};
+    entity.maxAmount = v;
+    goTo(`${kind}_structure`);
+  });
+}
+
+function entityRecapRows(kind) {
+  const entity = getEntity(kind);
+  const rows = [];
+  rows.push(["Billed", entity.feeType]);
+  if (entity.feeType === "Per Page") rows.push(["Per-chart max", entity.hasMax ? fmtAmount(entity.maxAmount) : "Uncapped"]);
+  if (entity.sameRate) rows.push(["Fee amount", fmtAmount(entity.amount)]);
+  else { rows.push(["Prepay amount", fmtAmount(entity.prepay)]); rows.push(["Postpay amount", fmtAmount(entity.postpay)]); }
+  rows.push(["CNA fee (per chart)", entity.hasCna ? fmtAmount(entity.cnaFee) : "$0"]);
+  return rows;
+}
+
+function renderEntityConfirm(kind) {
+  const label = entityLabel(kind);
+  const recap = entityRecapRows(kind).map(([k, v]) => `<div class="recap-row"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card">
+      <div class="qcard-title">Here's what I've got for ${escapeHtml(label)}</div>
+      <div class="recap-card">${recap}</div>
+      <p style="font-size:12.5px;color:var(--sub);">Check this before moving on — it's easier to fix now than after the whole schedule is submitted.</p>
+    </div>
+    <div class="nav-row">
+      <button class="ghost" id="editBtn" type="button">Edit</button>
+      <button class="primary" id="continueBtn" type="button">Looks right — continue</button>
+    </div>
+  `;
+  document.getElementById("editBtn").addEventListener("click", () => goTo(`${kind}_feeType`));
+  document.getElementById("continueBtn").addEventListener("click", () => goTo(KIND_META[kind].nextMajor));
+}
+
+/* ---------------------------------------------------------------------
+   Vendor exceptions (carveouts) — loop
+--------------------------------------------------------------------- */
+function renderCarveoutGate() {
+  questionShell(
+    "Do any specific vendors need their own fee schedule — or need to be excluded entirely?",
+    "Use this for named vendor exceptions to the General HIH rate (e.g. a vendor with a higher negotiated fee), or vendors the client won't pay PPT fees to at all.",
+    `
+      <button class="choice-btn" data-v="yes" type="button">Yes<span class="sub">Set up one or more vendor exceptions</span></button>
+      <button class="choice-btn" data-v="no" type="button">No<span class="sub">Every vendor follows the rates already entered</span></button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    state.hasCarveouts = btn.dataset.v === "yes";
+    if (state.hasCarveouts) { state.currentCarveout = newCarveout(); goTo("carveout_type"); }
+    else goTo("review");
+  }));
+}
+
+function renderCarveoutType() {
+  questionShell(
+    "For this vendor, do you want to set a custom fee schedule or exclude them from PPT payment entirely?",
+    "\"Exclude\" means the vendor is not approved for PPT fees at all — no amount is collected for them.",
+    `
+      <button class="choice-btn" data-v="custom" type="button">Set a custom fee schedule</button>
+      <button class="choice-btn" data-v="exclusion" type="button">Exclude from PPT payment</button>
+    `
+  );
+  document.querySelectorAll(".choice-btn").forEach(btn => btn.addEventListener("click", () => {
+    state.currentCarveout.type = btn.dataset.v;
+    goTo("carveout_vendor");
+  }));
+}
+
+function renderCarveoutVendor() {
+  const err = state._err || {};
+  questionShell("Which vendor?", "Pick from the list if the vendor is known, or type a name if it's not listed yet.", `
+    <div class="amount-field ${err.vendorName ? "err" : ""}">
+      <label>Vendor name</label>
+      <input type="text" id="vendorName" list="vendorNameList" value="${escapeAttr(state.currentCarveout.vendorName)}" placeholder="Start typing…" style="max-width:320px;">
+      <datalist id="vendorNameList">
+        ${CARVEOUT_VENDOR_NAMES.map(n => `<option value="${escapeAttr(n)}">`).join("")}
+      </datalist>
+      ${err.vendorName ? `<span class="field-error">${err.vendorName}</span>` : ""}
+    </div>
+    <button class="primary" id="continueBtn" type="button">Continue</button>
+  `);
+  document.getElementById("continueBtn").addEventListener("click", () => {
+    const v = document.getElementById("vendorName").value.trim();
+    if (!v) { state._err = { vendorName: "Required" }; render(); return; }
+    state._err = {};
+    state.currentCarveout.vendorName = v;
+    if (state.currentCarveout.type === "exclusion") goTo("carveout_confirm");
+    else goTo("carveout_feeType");
+  });
+}
+
+function renderCarveoutConfirm() {
+  const c = state.currentCarveout;
+  const isExclusion = c.type === "exclusion";
+  const recapRows = isExclusion
+    ? [["Type", "Excluded from PPT payment"]]
+    : [["Type", "Custom fee schedule"], ...entityRecapRows("carveout")];
+  const recap = recapRows.map(([k, v]) => `<div class="recap-row"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
+
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card">
+      <div class="qcard-title">Here's what I've got for ${escapeHtml(c.vendorName)}</div>
+      <div class="recap-card">${recap}</div>
+      ${state.carveouts.length ? `<p style="font-size:12.5px;color:var(--sub);">Already added: ${state.carveouts.map(x => escapeHtml(x.vendorName)).join(", ")}</p>` : ""}
+    </div>
+    <div class="nav-row">
+      <button class="ghost" id="editBtn" type="button">Edit</button>
+      <span class="spacer"></span>
+      <button class="secondary" id="addAnotherBtn" type="button">Add another vendor</button>
+      <button class="primary" id="doneBtn" type="button">Done — continue to review</button>
+    </div>
+  `;
+  document.getElementById("editBtn").addEventListener("click", () => goTo("carveout_type"));
+  document.getElementById("addAnotherBtn").addEventListener("click", () => {
+    state.carveouts.push(state.currentCarveout);
+    state.currentCarveout = newCarveout();
+    goTo("carveout_type");
+  });
+  document.getElementById("doneBtn").addEventListener("click", () => {
+    state.carveouts.push(state.currentCarveout);
+    state.currentCarveout = null;
+    goTo("review");
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Review / Help / Confirmation
+--------------------------------------------------------------------- */
+function renderReview() {
+  syncDerivedState();
+  const feeText = buildFeeText();
+
+  let sectionsHtml = "";
+  if (!state.noPPT) {
+    sectionsHtml += `
+      <div class="review-section">
+        <h3>Provider/Hospital</h3>
+        ${state.ph.doesPay
+          ? entityRecapRows("ph").map(([k, v]) => `<div class="recap-row"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("")
+          : `<p style="font-size:13px;color:var(--sub);margin:0;">No approved rate provided — defaults to $0.</p>`}
+      </div>
+      <div class="review-section">
+        <h3>General HIH</h3>
+        ${state.hih.doesPay
+          ? entityRecapRows("hih").map(([k, v]) => `<div class="recap-row"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("")
+          : `<p style="font-size:13px;color:var(--sub);margin:0;">No approved rate provided — defaults to $0.</p>`}
+      </div>
+      <div class="review-section">
+        <h3>Vendor Exceptions</h3>
+        ${state.carveouts.length
+          ? state.carveouts.map(c => `<div class="recap-row"><span class="k">${escapeHtml(c.vendorName)}</span><span class="v">${c.type === "exclusion" ? "Excluded" : "Custom schedule"}</span></div>`).join("")
+          : `<p style="font-size:13px;color:var(--sub);margin:0;">None.</p>`}
+      </div>
+    `;
+  } else {
+    sectionsHtml = `<p style="font-size:14px;color:var(--sub);">Approval required for all PPT fees — no fee schedule to review.</p>`;
+  }
+
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card">
+      <h2 style="font-size:15px;margin-top:0;">Review fee schedule</h2>
+      ${sectionsHtml}
+      <div class="preview-box">
+        <div class="label">Fee Text Preview (as it will appear downstream)</div>
+        <div class="text">${escapeHtml(feeText)}</div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="ghost" id="helpBtn" type="button">Help</button>
+      <span class="spacer"></span>
+      <button class="secondary" id="backBtn" type="button">Go Back</button>
+      <button class="primary" id="approveBtn" type="button">Approve</button>
+    </div>
+    ${assumptionsHtml()}
+  `;
+  document.getElementById("backBtn").addEventListener("click", back);
+  document.getElementById("helpBtn").addEventListener("click", () => goTo("help"));
+  document.getElementById("approveBtn").addEventListener("click", () => goTo("confirmation"));
+}
+
+function assumptionsHtml() {
+  return `
+    <details class="assumptions">
+      <summary>Prototype notes &amp; assumptions</summary>
+      <ul>
+        <li>Same underlying data model and Fee Text Preview logic as the data-entry form prototype — answers here map to the same Vendor Type / Payment Type / Fee Type / CNA Fee / Max Amount fields, so both prototypes produce identical output for the same schedule.</li>
+        <li>The questionnaire deliberately never shows a raw table: it asks one decision at a time, uses plain-language questions instead of field labels, and shows a confirm-as-you-go recap after each vendor type so mistakes get caught before the full review — the main goal being fewer CS entry errors, not fewer capabilities.</li>
+        <li>Prepay/Postpay is only split into two amounts if CS explicitly says the fee differs by timing; otherwise one amount is reused for both, avoiding accidental mismatched entries.</li>
+        <li>CNA fee is asked once per vendor type/vendor and applied regardless of prepay/postpay split, since CNA fees don't typically vary by payment timing.</li>
+        <li>"Approval required for all per page fees" (asked once, up front) suppresses the per-page question and forces Per Chart everywhere, same as the data-entry prototype.</li>
+        <li>Vendor exceptions loop one vendor at a time; each is either a full exclusion or a custom fee schedule using the same sub-flow as Provider/Hospital and General HIH.</li>
+        <li>Vendor Name uses a browser autocomplete list of known HIH Carveout vendors (same list as the data-entry prototype) but also accepts free text if the vendor isn't listed.</li>
+        <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
+      </ul>
+    </details>
+  `;
+}
+
+function renderHelp() {
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card">
+      <div class="help-box">
+        <p style="margin-top:0;"><strong>Need help with this fee schedule?</strong></p>
+        <p>Please submit a PPI ticket describing the issue, and post in <code>#support-switchboard-cutover</code> in Slack.</p>
+      </div>
+    </div>
+    <div class="nav-row">
+      <span></span>
+      <button class="secondary" id="backToReview" type="button">Back to Review</button>
+    </div>
+  `;
+  document.getElementById("backToReview").addEventListener("click", () => goTo("review"));
+}
+
+function renderConfirmation() {
+  syncDerivedState();
+  app.innerHTML = `
+    ${headerHtml()}
+    <div class="card confirm-box">
+      <div class="check">✓</div>
+      <h2 style="margin:0 0 6px;font-size:17px;">Fee schedule activated</h2>
+      <p style="color:var(--sub);font-size:14px;max-width:480px;margin:0 auto 18px;">
+        This fee schedule is now the active PPT fee schedule for Order #DV-10482. Any previously active schedule for this order has been replaced.
+      </p>
+      <div class="preview-box" style="text-align:left;max-width:600px;margin:0 auto 18px;">
+        <div class="label">Submitted Fee Text</div>
+        <div class="text">${escapeHtml(buildFeeText())}</div>
+      </div>
+      <button class="secondary" id="startOverBtn" type="button">Start a new fee schedule</button>
+    </div>
+  `;
+  document.getElementById("startOverBtn").addEventListener("click", () => {
+    state.stage = "intro";
+    state.history = [];
+    state.noPPT = null;
+    state.perPageApproval = null;
+    state.ph = newEntity();
+    state.hih = newEntity();
+    state.hasCarveouts = null;
+    state.carveouts = [];
+    state.currentCarveout = null;
+    render();
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Patch render() dispatch to cover the small sub-stages added above
+   (cnaAmount / maxGate) without cluttering the main dispatcher.
+--------------------------------------------------------------------- */
+const _originalRender = render;
+render = function () {
+  syncDerivedState();
+  const s = state.stage;
+  if (isCnaAmountStage(s)) return renderCnaAmount(kindFromStage(s));
+  if (isMaxGateStage(s)) return renderMaxGate(kindFromStage(s));
+  return _originalRender();
+};
+
+/* ---------------------------------------------------------------------
+   Password gate (prototype access control only — not real security;
+   password is visible in this file's source)
+--------------------------------------------------------------------- */
+const PROTO_PASSWORD = "mango";
+const PROTO_AUTH_KEY = "pptFeeQuestionnaireAuth";
+
+function initPasswordGate() {
+  const gate = document.getElementById("pwGate");
+  if (sessionStorage.getItem(PROTO_AUTH_KEY) === "1") { gate.classList.add("hidden"); return; }
+  const form = document.getElementById("pwForm");
+  const input = document.getElementById("pwInput");
+  const error = document.getElementById("pwError");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (input.value === PROTO_PASSWORD) {
+      sessionStorage.setItem(PROTO_AUTH_KEY, "1");
+      gate.classList.add("hidden");
+    } else {
+      error.textContent = "Incorrect password.";
+      input.value = "";
+      input.focus();
+    }
+  });
+}
+
+initPasswordGate();
+render();
+</script>
+</body>
+</html>
