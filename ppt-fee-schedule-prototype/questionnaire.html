@@ -381,9 +381,10 @@ function buildFeeText() {
     if (!seenExcl.has(lbl)) { seenExcl.add(lbl); excludedLabels.push(lbl); }
   });
   const exclusionSegment = excludedLabels.length ? `Not approved for ${excludedLabels.join(", ")}` : "";
-  const perPageSegment = state.approvalRequiredPerPage ? "Approval required for all per page fees" : "";
 
-  const all = [...nonExclusionSegments, exclusionSegment, perPageSegment].filter(Boolean);
+  // Note: "approval required for all per page fees" is not called out in the output text —
+  // it's implied by there being no per-page rate on the schedule at all.
+  const all = [...nonExclusionSegments, exclusionSegment].filter(Boolean);
   return all.join(" | ");
 }
 
@@ -967,7 +968,7 @@ function assumptionsHtml() {
         <li>The questionnaire deliberately never shows a raw table: it asks one decision at a time, uses plain-language questions instead of field labels, and shows a confirm-as-you-go recap after each vendor type so mistakes get caught before the full review — the main goal being fewer CS entry errors, not fewer capabilities.</li>
         <li>Prepay/Postpay is only split into two amounts if CS explicitly says the fee differs by timing; otherwise one amount is reused for both, avoiding accidental mismatched entries.</li>
         <li>CNA fee is asked once per vendor type/vendor and applied regardless of prepay/postpay split, since CNA fees don't typically vary by payment timing.</li>
-        <li>"Approval required for all per page fees" (asked once, up front) suppresses the per-page question and forces Per Chart everywhere, same as the data-entry prototype.</li>
+        <li>"Approval required for all per page fees" (asked once, up front) suppresses the per-page question and forces Per Chart everywhere, but is no longer called out in the Fee Text Preview itself — it's implied by the absence of any per-page rate on the schedule.</li>
         <li>Vendor exceptions loop one vendor at a time; each is either a full exclusion or a custom fee schedule using the same sub-flow as Provider/Hospital and General HIH.</li>
         <li>Vendor Name uses a browser autocomplete list of known HIH Carveout vendors (same list as the data-entry prototype) but also accepts free text if the vendor isn't listed.</li>
         <li>This is a static, client-side prototype with no backend — "Approve" does not activate a real order fee schedule.</li>
